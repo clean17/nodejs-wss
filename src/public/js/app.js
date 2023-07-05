@@ -1,1 +1,1 @@
-express.static
+alert('ㅋㅋㅋㅋㅋ');
