@@ -1,6 +1,7 @@
 import express from "express";
 import http from "http";
 import WebSocket from "ws";
+import { v4 as uuidv4 } from 'uuid';
 
 /* 자바스크립트에서 서버 실행
 var express = require('express');
@@ -47,17 +48,28 @@ const handleListen = () => console.log(app.locals.title + ' is listening on port
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-function handleConnection(socket) {
-    console.log(socket);
-    socket.on('message', (message) => {
-        console.log(`${message}`);
-        socket.send('서버에서 메시지를 전송합니다.');
+const sockets = [];
+
+wss.on('connection', (socket) => {
+    const randomUUID = uuidv4();
+    const username = `User-${randomUUID}`;
+    console.log(`${username} is connected.`);
+    sockets.push({socket, username});
+    for (const { socket: sc } of sockets) {
+        sc.send(`${username} 님이 참가하셨습니다.`);
+    }
+    socket.on('message', (msg) => {
+        console.log(`${username}: ${msg}`);
+        for (const { socket: sc } of sockets) {
+            sc.send(`${username}: ${msg}`);
+        }
     });
     socket.on('close', () => {
-        console.log('클라이언트 연결이 종료되었습니다.');
+        console.log(`${username} is disconnected.`);
+        for (const { socket: sc } of sockets) {
+            sc.send(`${username} 님이 나갔습니다.`);
+        }
     });
-}
-
-wss.on('connection', handleConnection);
+});
 
 server.listen(3000, handleListen);
