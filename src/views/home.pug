@@ -10,8 +10,11 @@ html(lang="en")
         header
             h1 Noom
         main
+            form#nick
+                input(type="text", placeholder='닉네임을 입력하세요', required) 
+                button Save         
             ul
-            form
+            form#message
                 input(type="text", placeholder='메세지를 입력하세요.', required) 
                 button Send
         script(src="/public/js/app.js")

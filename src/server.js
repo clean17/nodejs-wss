@@ -48,26 +48,38 @@ const handleListen = () => console.log(app.locals.title + ' is listening on port
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const sockets = [];
+const sockets = []; // push로 데이터를 넣는다.
 
 wss.on('connection', (socket) => {
     const randomUUID = uuidv4();
-    const username = `User-${randomUUID}`;
-    console.log(`${username} is connected.`);
-    sockets.push({socket, username});
-    for (const { socket: sc } of sockets) {
-        sc.send(`${username} 님이 참가하셨습니다.`);
+    const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후 
+    socket.nickname = `User-${shortenedUuid}`;
+    console.log(`${socket.nickname} is connected.`);
+    sockets.push(socket);
+    for (const sc of sockets) {
+        sc.send(`${socket.nickname} 님이 참가하셨습니다.`);
     }
-    socket.on('message', (msg) => {
-        console.log(`${username}: ${msg}`);
-        for (const { socket: sc } of sockets) {
-            sc.send(`${username}: ${msg}`);
+    socket.on('message', (json) => {
+        const msg = JSON.parse(json); // JS 오브젝트로 변환
+        console.log(msg);
+        switch (msg.type){
+            case "nickname":
+                // for (const sc of sockets) {
+                //     sc.send(`<닉네임 변경> \n ${socket.nickname} -> ${msg.payload}`);
+                // }
+                socket.nickname = msg.payload;
+                break;
+            case "message":
+                console.log(`${socket.nickname}: ${msg.payload}`);
+                for (const sc of sockets) {
+                    sc.send(`${socket.nickname} : ${msg.payload}`);
+                }
         }
     });
     socket.on('close', () => {
-        console.log(`${username} is disconnected.`);
-        for (const { socket: sc } of sockets) {
-            sc.send(`${username} 님이 나갔습니다.`);
+        console.log(`${socket.nickname} is disconnected.`);
+        for (const sc of sockets) {
+            sc.send(`${socket.nickname} 님이 나갔습니다.`);
         }
     });
 });
