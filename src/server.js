@@ -18,7 +18,7 @@ app.use("/public", express.static(__dirname + "/public")); // express.static 으
 
 app.get('/', function (req, res) {
     // res.send('Welcome to ' + app.locals.title);
-    res.render('home');
+    res.render('home'); // pug
 });
 
 app.get('/*', (_, res) => { res.redirect("/") });
@@ -40,7 +40,7 @@ app.route('/book')
 
 const handleListen = () => console.log(app.locals.title + ' is listening on port 3000');
 
-// http 서버를 생성하기 위해서 listen 제거
+// ws를 추가한 http 서버를 직접 생성하기 위해서 express의 listen 제거
 // app.listen(3000, function () {
 //     console.log(app.locals.title + ' is listening on port 3000');
 // }); 
@@ -48,22 +48,32 @@ const handleListen = () => console.log(app.locals.title + ' is listening on port
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-const sockets = []; // push로 데이터를 넣는다.
+// const sockets = []; // push로 데이터를 넣는다.
+const sockets = new Map();
 
 wss.on('connection', (socket) => {
     const randomUUID = uuidv4();
     const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후 
     socket.nickname = `User-${shortenedUuid}`;
     console.log(`${socket.nickname} is connected.`);
-    sockets.push(socket);
-    for (const sc of sockets) {
-        sc.send(`${socket.nickname} 님이 참가하셨습니다.`);
-    }
+    // sockets.push(socket);
+    sockets.set(socket, 0);
+    const keys = Array.from(sockets.keys());
+    keys.forEach((sc) => {
+        sc.send(`${socket.nickname} 님이 참가하셨습니다.`); 
+    });
+    // for (const sc of sockets) {
+    //     sc.send(`${socket.nickname} 님이 참가하셨습니다.`);
+    // }
     socket.on('message', (json) => {
         const msg = JSON.parse(json); // JS 오브젝트로 변환
         console.log(msg);
-        switch (msg.type){
+        const keys = [...sockets.keys()];
+        switch (msg.type) {
             case "nickname":
+                keys.forEach((sc) => {
+                    sc.send(`<닉네임 변경> \n ${socket.nickname} -> ${msg.payload}`);
+                });
                 // for (const sc of sockets) {
                 //     sc.send(`<닉네임 변경> \n ${socket.nickname} -> ${msg.payload}`);
                 // }
@@ -71,16 +81,24 @@ wss.on('connection', (socket) => {
                 break;
             case "message":
                 console.log(`${socket.nickname}: ${msg.payload}`);
-                for (const sc of sockets) {
+                keys.forEach((sc) => {
                     sc.send(`${socket.nickname} : ${msg.payload}`);
-                }
+                });
+            // for (const sc of sockets) {
+            //     sc.send(`${socket.nickname} : ${msg.payload}`);
+            // }
         }
     });
     socket.on('close', () => {
         console.log(`${socket.nickname} is disconnected.`);
-        for (const sc of sockets) {
+        sockets.delete(socket); // O(1)
+        const keys = [...sockets.keys()];
+        keys.forEach((sc) => {
             sc.send(`${socket.nickname} 님이 나갔습니다.`);
-        }
+        });
+        // for (const sc of sockets) {
+        //     sc.send(`${socket.nickname} 님이 나갔습니다.`);
+        // }
     });
 });
 

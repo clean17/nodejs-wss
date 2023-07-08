@@ -6,7 +6,6 @@ const nickForm = document.querySelector("#nick");
 socket.onopen = () => { 
     console.log(socket);
     console.log('서버에 연결되었습니다.');
-    // socket.send('클라이언트에서 메시지를 전송합니다.');
 };
 
 socket.onmessage = (event) => {
