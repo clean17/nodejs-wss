@@ -21,11 +21,18 @@ const server = http.createServer(app);
 const io = SocketIO(server);
 
 io.on('connection', (socket) => {
-    socket.on('enter_room', (msg, done) => {
-        console.log(msg);
-        done('good');
+    socket.onAny((event, ...args) => {
+        console.log(`got ${event}`);
+      });
+    socket.on('enter_room', (roomName, done) => {
+        socket.join(roomName);
+        socket.to(roomName).emit(`user ${socket.id} has left the room`);
+        socket.leave(roomName);
+        // done('good'); // backendDone
+        done(); // showRoom
     }); // 커스텀 이벤트
-});
+}); 
+
 
 const handleListen = () => console.log(app.locals.title + ' is listening on port 3000');
 server.listen(3000, handleListen);
