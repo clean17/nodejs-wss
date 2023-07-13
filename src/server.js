@@ -1,7 +1,7 @@
 import express from "express";
 import http from "http";
-import nodemon from "nodemon";
-import SocketIO from "socket.io";
+import { Server } from "socket.io";
+const { instrument } = require("@socket.io/admin-ui");
 import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
@@ -19,7 +19,17 @@ app.get('/', function (req, res) {
 app.get('/*', (_, res) => { res.redirect("/") });
 
 const server = http.createServer(app);
-const io = SocketIO(server);
+const io = new Server(server, {
+    cors: {
+        origin: ["https://admin.socket.io"],
+        credentials: true
+    },
+});
+
+instrument(io, {
+    auth: false,
+    mode: "development",
+});
 
 function publicRooms() {
     /* const sids = io.sockets.adapter.sids;
@@ -27,19 +37,19 @@ function publicRooms() {
     const { sockets: { adapter: { sids, rooms } } } = io;
     const publicRooms = [];
     rooms.forEach((_, key) => {
-        if (sids.get(key) === undefined) { 
+        if (sids.get(key) === undefined) {
             publicRooms.push(key);
         }
     })
     return publicRooms;
 }
 
-function roomCount(roomName){
+function roomCount(roomName) {
     return io.sockets.adapter.rooms.get(roomName)?.size; // rooms 는 map, 내부는 set
 }
 
 io.on('connection', (socket) => {
-    console.log(io.sockets.adapter);
+    // console.log(io.sockets.adapter);
     const randomUUID = uuidv4();
     const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후 
     socket['nickname'] = `User-${shortenedUuid}`;
@@ -59,7 +69,7 @@ io.on('connection', (socket) => {
     });
     socket.on("disconnect", () => {
         io.sockets.emit('room_change', publicRooms());
-    }); 
+    });
     socket.on("new_msg", (msg, room, done) => {
         socket.to(room).emit("new_msg", `${socket.nickname} : ${msg}`);
         done();

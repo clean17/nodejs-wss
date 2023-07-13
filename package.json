@@ -12,6 +12,7 @@
     "@babel/core": "^7.22.6",
     "@babel/node": "^7.22.6",
     "@babel/preset-env": "^7.22.6",
+    "@socket.io/admin-ui": "^0.5.1",
     "express": "^4.18.2",
     "nodemon": "^2.0.22",
     "pug": "^3.0.2",
