@@ -1,5 +1,6 @@
 import express from "express";
 import http from "http";
+import nodemon from "nodemon";
 import SocketIO from "socket.io";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -20,6 +21,23 @@ app.get('/*', (_, res) => { res.redirect("/") });
 const server = http.createServer(app);
 const io = SocketIO(server);
 
+function publicRooms() {
+    /* const sids = io.sockets.adapter.sids;
+    const rooms = io.sockets.adapter.rooms; */ // 아래가 더 깔끔
+    const { sockets: { adapter: { sids, rooms } } } = io;
+    const publicRooms = [];
+    rooms.forEach((_, key) => {
+        if (sids.get(key) === undefined) { 
+            publicRooms.push(key);
+        }
+    })
+    return publicRooms;
+}
+
+function roomCount(roomName){
+    return io.sockets.adapter.rooms.get(roomName)?.size; // rooms 는 map, 내부는 set
+}
+
 io.on('connection', (socket) => {
     console.log(io.sockets.adapter);
     const randomUUID = uuidv4();
@@ -31,13 +49,17 @@ io.on('connection', (socket) => {
     socket.on('enter_room', (roomName, done) => {
         socket.join(roomName);
         done(); // showRoom
-        socket.to(roomName).emit("welcome", socket.nickname); // welcome 이벤트 발생
+        socket.to(roomName).emit("welcome", socket.nickname, roomCount(roomName)); // welcome 이벤트 발생
+        io.sockets.emit('room_change', publicRooms());
     }); // 커스텀 이벤트
     socket.on("disconnecting", () => {
         socket.rooms.forEach(room => { // set 이므로 forEach 가능
-            socket.to(room).emit('bye', socket.nickname) 
+            socket.to(room).emit('bye', socket.nickname, roomCount(room) - 1)
         });
     });
+    socket.on("disconnect", () => {
+        io.sockets.emit('room_change', publicRooms());
+    }); 
     socket.on("new_msg", (msg, room, done) => {
         socket.to(room).emit("new_msg", `${socket.nickname} : ${msg}`);
         done();
