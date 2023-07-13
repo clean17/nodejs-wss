@@ -23,15 +23,25 @@ const io = SocketIO(server);
 io.on('connection', (socket) => {
     socket.onAny((event, ...args) => {
         console.log(`got ${event}`);
-      });
+    });
     socket.on('enter_room', (roomName, done) => {
         socket.join(roomName);
         socket.to(roomName).emit(`user ${socket.id} has left the room`);
-        socket.leave(roomName);
+        // socket.leave(roomName);
         // done('good'); // backendDone
         done(); // showRoom
+        socket.to(roomName).emit("welcome"); // welcome 이벤트 발생
     }); // 커스텀 이벤트
-}); 
+    socket.on("disconnecting", () => {
+        socket.rooms.forEach(room => { // set 이므로 forEach 가능
+            socket.to(room).emit('bye') 
+        });
+    });
+    socket.on("new_msg", (msg, room, done) => {
+        socket.to(room).emit("new_msg", msg);
+        done();
+    });
+});
 
 
 const handleListen = () => console.log(app.locals.title + ' is listening on port 3000');
