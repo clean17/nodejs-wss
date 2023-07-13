@@ -21,26 +21,30 @@ const server = http.createServer(app);
 const io = SocketIO(server);
 
 io.on('connection', (socket) => {
+    console.log(io.sockets.adapter);
+    const randomUUID = uuidv4();
+    const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후 
+    socket['nickname'] = `User-${shortenedUuid}`;
     socket.onAny((event, ...args) => {
         console.log(`got ${event}`);
     });
     socket.on('enter_room', (roomName, done) => {
         socket.join(roomName);
-        socket.to(roomName).emit(`user ${socket.id} has left the room`);
-        // socket.leave(roomName);
-        // done('good'); // backendDone
         done(); // showRoom
-        socket.to(roomName).emit("welcome"); // welcome 이벤트 발생
+        socket.to(roomName).emit("welcome", socket.nickname); // welcome 이벤트 발생
     }); // 커스텀 이벤트
     socket.on("disconnecting", () => {
         socket.rooms.forEach(room => { // set 이므로 forEach 가능
-            socket.to(room).emit('bye') 
+            socket.to(room).emit('bye', socket.nickname) 
         });
     });
     socket.on("new_msg", (msg, room, done) => {
-        socket.to(room).emit("new_msg", msg);
+        socket.to(room).emit("new_msg", `${socket.nickname} : ${msg}`);
         done();
     });
+    socket.on('nickname', (nickname) => {
+        socket['nickname'] = nickname; // socket의 nickname 프로퍼티 설정
+    })
 });
 
 

@@ -7,10 +7,6 @@ const room = document.getElementById('room');
 room.hidden = true;
 let roomName;
 
-// function backendDone(msg){
-//     console.log(msg);
-// }
-
 // 채팅 보내기 ( 로그 남기기 )
 function addMessage(msg){
     const ul = room.querySelector('ul');
@@ -22,7 +18,7 @@ function addMessage(msg){
 
 function handleMessageSubmit(event){
     event.preventDefault();
-    const input = room.querySelector('input');
+    const input = room.querySelector('#msg input'); // querySelector 는 첫번째 요소만 가져오므로 id 태그 이용
     const value = input.value;
     // join한 room에만 메세지 전송
     socket.emit('new_msg', input.value, roomName, () => {
@@ -31,7 +27,11 @@ function handleMessageSubmit(event){
     input.value = "";
 }
 
-
+function handleNickNameSubmit(event){
+    event.preventDefault();
+    const input = room.querySelector('#name input');
+    socket.emit('nickname', input.value);
+}
 
 function showRoom(){
     welcome.hidden = true;
@@ -43,6 +43,8 @@ function showRoom(){
     // 이벤트 리스너 추가
     msgForm.addEventListener('submit', handleMessageSubmit);
     nameForm.addEventListener('submit', handleNickNameSubmit);
+    const nicknameInput = nameForm.elements['nickname'];
+    nicknameInput.value = "";
 }
 
 // join room
@@ -57,12 +59,12 @@ function handleRoomSubmit(event){
 // 이벤트 리스너
 form.addEventListener('submit', handleRoomSubmit);
 
-socket.on("welcome", () => {
-    addMessage("Someone Joined !");
+socket.on("welcome", (user) => {
+    addMessage(`${user} Joined!`);
 });
 
-socket.on("bye", () => {
-    addMessage("Someone left !");
+socket.on("bye", (user) => {
+    addMessage(`${user} left !`);
 });
 
 socket.on("new_msg", (msg) => {
