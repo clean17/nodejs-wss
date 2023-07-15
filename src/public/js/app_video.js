@@ -71,7 +71,7 @@ async function getMedia(deviceId) {
         } */
 
     try {
-        myStream = await navigator.mediaDevices.getUserMedia(deviceId ? audioContrains : initialConstrains);
+        myStream = await navigator.mediaDevices.getUserMedia(deviceId ? audioContrains : initialConstrains); // MediaStream
         myFace.srcObject = myStream;
         if (!deviceId) {
             await getAudios();
@@ -123,17 +123,18 @@ audioSelect.addEventListener('input', handleCameraChange);
 
 welcomeForm = welcome.querySelector('form');
 
-async function startMedia() {
+async function initMedia() {
     welcome.hidden = true;
     call.hidden = false;
     await getMedia();
     makeConnection();
 }
 
-function handleWelcomeSubmit(event) {
+async function handleWelcomeSubmit(event) {
     event.preventDefault();
     const input = welcomeForm.querySelector('input');
-    socket.emit('join_room', input.value, startMedia);
+    await initMedia();
+    socket.emit('join_room', input.value);
     roomName = input.value; // 전역변수에 저장
     input.value = "";
 }
@@ -142,15 +143,25 @@ welcomeForm.addEventListener('submit', handleWelcomeSubmit);
 
 ///////////////////////// Socket Code /////////////////////////////////////
 
-socket.on('welcome', async () => {
+socket.on('welcome', async () => { // room에 있는 Peer들은 각자의 offer를 생성 및 제안
     const offer = await myPeerConnection.createOffer();
-    myPeerConnection.setLocalDescription(offer);
+    myPeerConnection.setLocalDescription(offer); // 각자의 offer로 SDP(Session Description Protocol) 설정
     console.log('send offer');
-    socket.emit('offer', offer, roomName);
+    socket.emit('offer', offer, roomName); // 만들어진 offer를 전송
 });
 
-socket.on('offer', (offer) => {
-    console.log(offer);
+socket.on('offer', async (offer) => {
+    // 'offer-answer' 핸드셰이크
+    // 각 offer 마다 세션을 생성 -> 새로운 웹RTC 연결을 초기화
+    // 세션 업데이트 : 원격 peer의 새로운 offer 정보로 업데이트
+    myPeerConnection.setRemoteDescription(offer);
+    const answer = await myPeerConnection.createAnswer(); // offer를 받고 answer를 생성해 SDP 설정
+    myPeerConnection.setLocalDescription(answer); // 각자의 peer는 local, remote를 설정
+    socket.emit('answer', answer, roomName);
+});
+
+socket.on('answer', (answer) => {
+    myPeerConnection.setRemoteDescription(answer); // 각 peer는 자신의 SDP 연결된 room의 SDP를 설정한다.
 });
 
 ////////////////////////// RTC Code /////////////////////////////////////
