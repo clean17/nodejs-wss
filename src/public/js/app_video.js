@@ -72,7 +72,7 @@ async function getMedia(deviceId) {
     try {
         // 웹캠은 사용중일때 접근 못함..
         myStream = await navigator.mediaDevices.getUserMedia(deviceId ? audioContrains : initialConstrains); // MediaStream
-        console.log("myStream 보여줘 ---------------------- ",myStream);
+        // console.log("myStream 보여줘 ---------------------- ",myStream);
         myFace.srcObject = myStream;
         if (!deviceId) {
             await getAudios();
@@ -100,7 +100,7 @@ function handleMuteClick() {
 }
 
 function handleCameraClick() {
-    myStream.getVideoTracks().forEach(track => {    
+    myStream.getVideoTracks().forEach(track => {
         track.enabled = !track.enabled
     });
     if (cameraOff) {
@@ -113,12 +113,27 @@ function handleCameraClick() {
 }
 
 async function handleCameraChange() {
+    await getMedia(videoSelect.value);
+    if (myPeerConnection) {
+        const videoSender = myPeerConnection.getSenders()
+            .find((sender) => sender.track.kind === "video");
+        console.log(videoSender);
+    }
+}
+
+async function handleAudioChange() {
     await getMedia(audioSelect.value);
+    if (myPeerConnection) {
+        const videoTrack = myStream.getVideoTracks()[0]; // 변경된 myStream
+        const audioSender = myPeerConnection.getSenders()
+            .find((sender) => sender.track.kind === "audio");
+        audioSender.replaceTrack(videoTrack);
+    }
 }
 
 muteBtn.addEventListener('click', handleMuteClick);
 cameraBtn.addEventListener('click', handleCameraClick);
-audioSelect.addEventListener('input', handleCameraChange);
+audioSelect.addEventListener('input', handleAudioChange);
 
 /////////////////////////// Choose a room ///////////////////////////////
 
@@ -171,7 +186,19 @@ socket.on('ice', (ice) => {
 ////////////////////////// RTC Code /////////////////////////////////////
 
 function makeConnection() { // 연결을 만든다.
-    myPeerConnection = new RTCPeerConnection();
+    myPeerConnection = new RTCPeerConnection({
+        iceServers: [
+            {
+                urls: [
+                    'stun.l.google.com:19302',
+                    'stun1.l.google.com:19302',
+                    'stun2.l.google.com:19302',
+                    'stun3.l.google.com:19302',
+                    'stun4.l.google.com:19302'
+                ]
+            }
+        ]
+    });
     myPeerConnection.addEventListener('icecandidate', handleIce); // 두 Peer사이의 가능한 모든 경로를 수집하고 다른 Peer에 전송
     myPeerConnection.addEventListener('addstream', handleAddStream);
     myStream.getTracks().forEach(track => {
