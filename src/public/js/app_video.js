@@ -46,7 +46,6 @@ async function getAudios() {
 }
 
 async function getMedia(deviceId) {
-
     const initialConstrains = {
         audio: true,
         video: {
@@ -71,7 +70,9 @@ async function getMedia(deviceId) {
         } */
 
     try {
+        // 웹캠은 사용중일때 접근 못함..
         myStream = await navigator.mediaDevices.getUserMedia(deviceId ? audioContrains : initialConstrains); // MediaStream
+        console.log("myStream 보여줘 ---------------------- ",myStream);
         myFace.srcObject = myStream;
         if (!deviceId) {
             await getAudios();
@@ -90,7 +91,7 @@ function handleMuteClick() {
         track.enabled = !track.enabled
     });
     if (!muted) {
-        muteBtn.innerText = "음소거  "
+        muteBtn.innerText = "음소거 중"
         muted = true;
     } else {
         muteBtn.innerText = "소리 켜짐"
@@ -99,7 +100,7 @@ function handleMuteClick() {
 }
 
 function handleCameraClick() {
-    myStream.getVideoTracks().forEach(track => {
+    myStream.getVideoTracks().forEach(track => {    
         track.enabled = !track.enabled
     });
     if (cameraOff) {
@@ -126,7 +127,7 @@ welcomeForm = welcome.querySelector('form');
 async function initMedia() {
     welcome.hidden = true;
     call.hidden = false;
-    await getMedia();
+    await getMedia(); // myStream 초기화
     makeConnection();
 }
 
@@ -146,7 +147,6 @@ welcomeForm.addEventListener('submit', handleWelcomeSubmit);
 socket.on('welcome', async () => { // room에 있는 Peer들은 각자의 offer를 생성 및 제안
     const offer = await myPeerConnection.createOffer();
     myPeerConnection.setLocalDescription(offer); // 각자의 offer로 SDP(Session Description Protocol) 설정
-    console.log('send offer');
     socket.emit('offer', offer, roomName); // 만들어진 offer를 전송
 });
 
@@ -164,11 +164,26 @@ socket.on('answer', (answer) => {
     myPeerConnection.setRemoteDescription(answer); // 각 peer는 자신의 SDP 연결된 room의 SDP를 설정한다.
 });
 
+socket.on('ice', (ice) => {
+    myPeerConnection.addIceCandidate(ice); // ICE(Interactive Connectivity Establishment)
+});
+
 ////////////////////////// RTC Code /////////////////////////////////////
 
 function makeConnection() { // 연결을 만든다.
     myPeerConnection = new RTCPeerConnection();
+    myPeerConnection.addEventListener('icecandidate', handleIce); // 두 Peer사이의 가능한 모든 경로를 수집하고 다른 Peer에 전송
+    myPeerConnection.addEventListener('addstream', handleAddStream);
     myStream.getTracks().forEach(track => {
         myPeerConnection.addTrack(track, myStream)
-    })
+    });
+};
+
+function handleIce(data) {
+    socket.emit('ice', data.candidate, roomName);
+}
+
+function handleAddStream(data) {
+    const peerFace = document.getElementById('peerFace');
+    peerFace.srcObject = data.stream;
 }

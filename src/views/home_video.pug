@@ -17,6 +17,7 @@ html(lang="en")
             div#call
                 div#myStream
                     video#myFace(autoplay, playsinline, width='400', height='400')
+                    video#peerFace(autoplay, playsinline, width='400', height='400')
                     //- <video id="myFace" autoplay playsinline> 자동재생, 모바일은 기본적으로 전체화면으로 재생하려고 하지만 인라인으로 재생하도록 한다.
                     //-     <source src="video.mp4" type="video/mp4">
                     //- </video>
@@ -24,5 +25,6 @@ html(lang="en")
                         button#mute 소리 켜짐
                         button#camera(style="margin-left: 100px;") 카메라 켜기
                         select#audios
+                    
         script(src="/socket.io/socket.io.js")
         script(src="/public/js/app_video.js")
