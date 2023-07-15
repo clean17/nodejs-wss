@@ -5,9 +5,16 @@ const muteBtn = document.getElementById('mute');
 const cameraBtn = document.getElementById('camera');
 const audioSelect = document.getElementById('audios');
 
+const welcome = document.getElementById('welcome');
+const call = document.getElementById('call');
+
+call.hidden = true;
+
 let myStream;
 let muted = false;
 let cameraOff = false;
+let roomName;
+let myPeerConnection;
 
 async function getCameras() {
     try {
@@ -28,7 +35,7 @@ async function getAudios() {
             const option = document.createElement('option')
             option.value = audio.deviceId;
             option.innerText = audio.label;
-            if(currentAudio.label == audio.label){
+            if (currentAudio.label == audio.label) {
                 option.selected = true;
             }
             audioSelect.appendChild(option);
@@ -39,6 +46,7 @@ async function getAudios() {
 }
 
 async function getMedia(deviceId) {
+
     const initialConstrains = {
         audio: true,
         video: {
@@ -53,21 +61,25 @@ async function getMedia(deviceId) {
         },
         video: true
     }
-    const cameraContrains = {
-        video: {
-            deviceId: {
-                exact: deviceId,
+    /*     const cameraContrains = {
+            video: {
+                deviceId: {
+                    exact: deviceId,
+                },
             },
-        },
-        audio: true
-    }
+            audio: true
+        } */
+
     try {
         myStream = await navigator.mediaDevices.getUserMedia(deviceId ? audioContrains : initialConstrains);
         myFace.srcObject = myStream;
-        if(!deviceId){
+        if (!deviceId) {
             await getAudios();
         }
         // await getCameras()   
+        myStream.getVideoTracks().forEach(track => {
+            track.enabled = !track.enabled
+        });
     } catch (err) {
         console.log(err);
     }
@@ -103,8 +115,49 @@ async function handleCameraChange() {
     await getMedia(audioSelect.value);
 }
 
-getMedia();
-
 muteBtn.addEventListener('click', handleMuteClick);
 cameraBtn.addEventListener('click', handleCameraClick);
 audioSelect.addEventListener('input', handleCameraChange);
+
+/////////////////////////// Choose a room ///////////////////////////////
+
+welcomeForm = welcome.querySelector('form');
+
+async function startMedia() {
+    welcome.hidden = true;
+    call.hidden = false;
+    await getMedia();
+    makeConnection();
+}
+
+function handleWelcomeSubmit(event) {
+    event.preventDefault();
+    const input = welcomeForm.querySelector('input');
+    socket.emit('join_room', input.value, startMedia);
+    roomName = input.value; // 전역변수에 저장
+    input.value = "";
+}
+
+welcomeForm.addEventListener('submit', handleWelcomeSubmit);
+
+///////////////////////// Socket Code /////////////////////////////////////
+
+socket.on('welcome', async () => {
+    const offer = await myPeerConnection.createOffer();
+    myPeerConnection.setLocalDescription(offer);
+    console.log('send offer');
+    socket.emit('offer', offer, roomName);
+});
+
+socket.on('offer', (offer) => {
+    console.log(offer);
+});
+
+////////////////////////// RTC Code /////////////////////////////////////
+
+function makeConnection() { // 연결을 만든다.
+    myPeerConnection = new RTCPeerConnection();
+    myStream.getTracks().forEach(track => {
+        myPeerConnection.addTrack(track, myStream)
+    })
+}

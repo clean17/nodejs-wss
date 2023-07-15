@@ -19,5 +19,16 @@ app.get('/*', (_, res) => { res.redirect("/") });
 const server = http.createServer(app);
 const io = new Server(server);
 
+io.on('connection', (socket) => {
+    socket.on('join_room', (roomName, done) => {
+        socket.join(roomName);
+        done();
+        socket.to(roomName).emit('welcome');
+    }); 
+    socket.on('offer', (offer, roomName) => {
+        socket.to(roomName).emit('offer', offer);
+    });
+});
+
 const handleListen = () => console.log(app.locals.title + ' is listening on port 3000');
 server.listen(3000, handleListen);
