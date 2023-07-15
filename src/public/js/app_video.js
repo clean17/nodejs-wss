@@ -15,6 +15,7 @@ let muted = false;
 let cameraOff = false;
 let roomName;
 let myPeerConnection;
+let myDataChannel;
 
 async function getCameras() {
     try {
@@ -48,9 +49,10 @@ async function getAudios() {
 async function getMedia(deviceId) {
     const initialConstrains = {
         audio: true,
-        video: {
-            facingMode: "user",
-        },
+        // video: {
+        //     facingMode: "user",
+        // },
+        video: false
     }
     const audioContrains = {
         audio: {
@@ -160,12 +162,19 @@ welcomeForm.addEventListener('submit', handleWelcomeSubmit);
 ///////////////////////// Socket Code /////////////////////////////////////
 
 socket.on('welcome', async () => { // room에 있는 Peer들은 각자의 offer를 생성 및 제안
+    myDataChannel = myPeerConnection.createDataChannel('chat');
+    myDataChannel.addEventListener('message', console.log); // message 이벤트 - send에 반응
+    console.log('dataChannel 생성됨');
     const offer = await myPeerConnection.createOffer();
     myPeerConnection.setLocalDescription(offer); // 각자의 offer로 SDP(Session Description Protocol) 설정
     socket.emit('offer', offer, roomName); // 만들어진 offer를 전송
 });
 
 socket.on('offer', async (offer) => {
+    myPeerConnection.addEventListener('datachannel', event => { // datachannel 감지
+        myDataChannel = event.channel;
+        myDataChannel.addEventListener('message', console.log);
+    });
     // 'offer-answer' 핸드셰이크
     // 각 offer 마다 세션을 생성 -> 새로운 웹RTC 연결을 초기화
     // 세션 업데이트 : 원격 peer의 새로운 offer 정보로 업데이트
@@ -190,11 +199,10 @@ function makeConnection() { // 연결을 만든다.
         iceServers: [
             {
                 urls: [
-                    'stun.l.google.com:19302',
-                    'stun1.l.google.com:19302',
-                    'stun2.l.google.com:19302',
-                    'stun3.l.google.com:19302',
-                    'stun4.l.google.com:19302'
+                    'stun:stun.l.google.com:19302',
+                    'stun:stun1.l.google.com:19302',
+                    'stun:stun2.l.google.com:19302',
+                    'stun:stun3.l.google.com:19302'
                 ]
             }
         ]
