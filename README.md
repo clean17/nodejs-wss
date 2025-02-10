@@ -20,7 +20,7 @@ https://velog.io/@merci/MediaStream-API-WebRTC
 이후 다른 PC에서 `npm i` 명령을 실행하면 `package.json`을 참조하여 `node_modules` 폴더에 패키지가 설치된다
 
 ### Nodemon
-Node.js 애플리케이션을 자동으로 다시 시작해주는 도구
+변경을 감지했을 때 Node.js 애플리케이션을 자동으로 다시 시작해주는 도구
 - 설치
 
 프로젝트에만 설치
@@ -31,7 +31,7 @@ npm install --save-dev nodemon
 
 - 실행방법
 
-  node app.js 대신
+  `node app.js` 대신 아래 명령어로 서버를 시작시킬 수 있다
 ```
 nodemon app.js
 ```
@@ -44,7 +44,7 @@ nodemon app.js
   }
 }
 ```
-`npm run dev` 명령어로 실행
+`npm run dev` 명령어로 실행하면 `npm run nodemon app.js`
 - 추가 설정
 
 특정 파일 확장자 감지
@@ -71,3 +71,43 @@ ext: 감시할 파일 확장자 지정
 ignore: 특정 폴더 무시
 
 exec: 실행할 명령어 지정
+
+### nodemon 의 실행 순서 (우선순위)
+1️⃣ 명령어에서 직접 파일 지정 → `nodemon server.js` → server.js 실행
+
+2️⃣ `nodemon.json`에 `exec` 설정이 있는 경우 → 해당 명령 실행
+```json
+{
+  "exec": "babel-node src/server.js"
+}
+```
+
+3️⃣ `package.json`의 `main` 속성이 있는 경우 → 해당 파일 실행
+```json
+{
+  "main": "app.js"
+}
+```
+
+4️⃣ `package.json`의 `scripts.dev` 속성이 있는 경우
+```json
+{
+  "scripts": {
+    "dev": "nodemon server.js"
+  }
+}
+```
+
+5️⃣ 위의 모든 설정이 없으면 `index.js` 실행
+
+`index.js`도 없으면 오류 발생
+
+📌 최종 실행 결과
+
+✅ `npm run dev` 실행
+
+✅ `nodemon server.js` 실행 (하지만 `nodemon.json`을 읽음)
+
+✅ `nodemon.json`의 `exec` 설정에 의해 `babel-node src/server.js` 실행
+
+ 최종 실행되는 명령어는 `babel-node src/server.js`
