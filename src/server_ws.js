@@ -18,7 +18,7 @@ app.use("/public", express.static(__dirname + "/public")); // express.static 으
 
 app.get('/', function (req, res) {
     // res.send('Welcome to ' + app.locals.title);
-    res.render('home'); // pug-ws
+    res.render('home_ws'); // pug-ws
 });
 
 app.get('/*', (_, res) => { res.redirect("/") });

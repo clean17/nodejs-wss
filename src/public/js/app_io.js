@@ -78,6 +78,7 @@ socket.on("new_msg", (msg) => {
     addMessage(msg);
 });
 
+// room이 생성되거나 제거되면 다른 소켓이 갱신
 socket.on("room_change", (rooms) => {
     const roomList = welcome.querySelector('ul');
     roomList.innerHTML = ""; // 매번 새롭게 렌더링

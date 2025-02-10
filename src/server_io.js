@@ -51,29 +51,33 @@ function roomCount(roomName) {
 io.on('connection', (socket) => {
     // console.log(io.sockets.adapter);
     const randomUUID = uuidv4();
-    const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후 
+    const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후
     socket['nickname'] = `User-${shortenedUuid}`;
-    socket.onAny((event, ...args) => {
+    /*socket.onAny((event, ...args) => {
         console.log(`got ${event}`);
-    });
+    });*/
     socket.on('enter_room', (roomName, done) => {
         socket.join(roomName);
         done(); // showRoom
         socket.to(roomName).emit("welcome", socket.nickname, roomCount(roomName)); // welcome 이벤트 발생
         io.sockets.emit('room_change', publicRooms());
-    }); // 커스텀 이벤트
+    });
+    // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
     socket.on("disconnecting", () => {
         socket.rooms.forEach(room => { // set 이므로 forEach 가능
             socket.to(room).emit('bye', socket.nickname, roomCount(room) - 1)
         });
     });
+    // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
     socket.on("disconnect", () => {
         io.sockets.emit('room_change', publicRooms());
     });
+    // 메시지 수신
     socket.on("new_msg", (msg, room, done) => {
         socket.to(room).emit("new_msg", `${socket.nickname} : ${msg}`);
         done();
     });
+    // 닉네임 변경
     socket.on('nickname', (nickname) => {
         socket['nickname'] = nickname; // socket의 nickname 프로퍼티 설정
     })
