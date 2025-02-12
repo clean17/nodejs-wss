@@ -7,6 +7,7 @@ import { instrument } from "@socket.io/admin-ui";
 import { v4 as uuidv4 } from 'uuid';
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import axios from "axios";
 import https from "https";
 
@@ -29,6 +30,12 @@ app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립�
 app.use("/public", express.static(__dirname + "/public")); // express.static 으로 정적파일 제공
 app.use(express.json()); // JSON 요청을 받을 수 있도록 설정
 
+const cert = fs.readFileSync("cert.pem");
+
+const agent = new https.Agent({
+    rejectUnauthorized: false, // 인증서 검증 비활성화
+    // ca: cert // 인증서를 서버가 신뢰하도록 한다
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -59,6 +66,23 @@ app.get('/*', (_, res) => { res.redirect("/") });
     res.json({ status: "broadcasted" });
 });*/
 
+
+
+
+const CHAT_FILE = path.join(__dirname, "chat.log");
+
+function logChatMessage(username, message) {
+    const now = new Date();
+    now.setHours(now.getHours() + 9);  // UTC → KST 변환
+    const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
+    const logEntry = `${timestamp} | ${username} | ${message}\n`;
+
+    fs.appendFile(CHAT_FILE, logEntry, (err) => {
+        if (err) {
+            console.error("로그 저장 실패:", err);
+        }
+    });
+}
 
 function sendServerChatMessage(username, message) {
     const now = new Date();
