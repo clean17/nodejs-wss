@@ -10,7 +10,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import axios from "axios";
 import https from "https";
-import admin from "firebase-admin";
+//import admin from "firebase-admin";
 
 /**************************************************************************/
 /*// Firebase 서비스 계정 키 로드
@@ -134,7 +134,7 @@ function sendServerChatMessage(username, message) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
-    axios.post("http://localhost:8090/func/chat/save-file", {
+    axios.post("http://127.0.0.1:8090/func/chat/save-file", {
     // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
         username: username,
@@ -217,5 +217,5 @@ io.on('connection', (socket) => {
 });
 
 
-const handleListen = () => console.log(app.locals.title + ' is listening on port 3001');
-server.listen(3001, handleListen);
+const handleListen = () => console.log(app.locals.title + ' is listening on port 3000');
+server.listen(3000, handleListen);
