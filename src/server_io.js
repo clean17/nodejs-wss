@@ -10,6 +10,52 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import axios from "axios";
 import https from "https";
+import admin from "firebase-admin";
+
+/**************************************************************************/
+/*// Firebase 서비스 계정 키 로드
+const serviceAccount = JSON.parse(fs.readFileSync("path/to/serviceAccountKey.json", "utf-8"));
+
+// Firebase Admin 초기화
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
+
+// 클라이언트에서 저장한 FCM 토큰 저장
+let userTokens = {};  // { userId: token }
+
+app.post("/save-fcm-token", (req, res) => {
+    const { userId, token } = req.body;
+    userTokens[userId] = token; // DB에 저장하면 더 안전함
+    res.json({ success: true, message: "FCM 토큰 저장 완료" });
+});
+
+// 소켓으로 채팅 메시지를 받으면 FCM 알림 전송
+app.post("/send-message", async (req, res) => {
+    const { userId, message } = req.body;
+    const token = userTokens[userId];
+
+    if (!token) {
+        return res.status(400).json({ success: false, message: "FCM 토큰이 없음" });
+    }
+
+    const payload = {
+        notification: {
+            title: "새로운 채팅 메시지",
+            body: message
+        },
+        token: token
+    };
+
+    try {
+        const response = await admin.messaging().send(payload);
+        res.json({ success: true, response });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});*/
+/**************************************************************************/
+
 
 const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 실행 중인 모듈의 URL을 가져옴, 현재 파일 경로를 반환
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
@@ -30,7 +76,7 @@ app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립�
 app.use("/public", express.static(__dirname + "/public")); // express.static 으로 정적파일 제공
 app.use(express.json()); // JSON 요청을 받을 수 있도록 설정
 
-const cert = fs.readFileSync("cert.pem");
+// const cert = fs.readFileSync("cert.pem");
 
 const agent = new https.Agent({
     rejectUnauthorized: false, // 인증서 검증 비활성화
@@ -88,8 +134,8 @@ function sendServerChatMessage(username, message) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
-    // axios.post("http://localhost:8090/func/chat/save-file", {
-    axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
+    axios.post("http://localhost:8090/func/chat/save-file", {
+    // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
         username: username,
         message: message
