@@ -10,7 +10,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import axios from "axios";
 import https from "https";
-const webpush = require("web-push");
+// const webpush = require("web-push");
 //import admin from "firebase-admin";
 
 /**************************************************************************/
@@ -62,17 +62,17 @@ const vapidKeys = {
     privateKey: "ejD0G1lxsoFJqohcz9fQnmZRS_srVyH7j-9_fBsf8bQ"
 };
 
-webpush.setVapidDetails(
-    "mailto:piw940317@gmail.com",
-    vapidKeys.publicKey,
-    vapidKeys.privateKey
-);
+// webpush.setVapidDetails(
+//     "mailto:piw940317@gmail.com",
+//     vapidKeys.publicKey,
+//     vapidKeys.privateKey
+// );
 
 // 구독 정보를 받아서 푸시 전송
 const pushSubscription = { /* 클라이언트에서 받은 구독 객체 */ };
 const payload = JSON.stringify({ title: "법무부", body: "새로운 알림이 있습니다." });
 
-webpush.sendNotification(pushSubscription, payload).catch(err => console.error(err));
+// webpush.sendNotification(pushSubscription, payload).catch(err => console.error(err));
 /**************************************************************************/
 
 
@@ -80,9 +80,11 @@ const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 �
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
 
 const app = express();
+const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem") // 절대경로로 수정 필요
+const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem") // 절대경로로 수정 필요
 const options = {
-    key: fs.readFileSync('192.168.141.160+1-key.pem'), // 절대경로로 수정 필요
-    cert: fs.readFileSync('192.168.141.160+1.pem') // 절대경로로 수정 필요
+    key: key, // 절대경로로 수정 필요
+    cert: cert // 절대경로로 수정 필요
 };
 
 app.locals.title = 'Node.js Server';
@@ -99,7 +101,6 @@ app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립�
 app.use("/public", express.static(__dirname + "/public")); // express.static 으로 정적파일 제공
 app.use(express.json()); // JSON 요청을 받을 수 있도록 설정
 
-const cert = fs.readFileSync("192.168.141.160+1.pem"); // 절대경로로 수정 필요
 
 const agent = new https.Agent({
     // rejectUnauthorized: false, // 인증서 검증 비활성화
