@@ -10,6 +10,7 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 import axios from "axios";
 import https from "https";
+const webpush = require("web-push");
 //import admin from "firebase-admin";
 
 /**************************************************************************/
@@ -54,6 +55,24 @@ app.post("/send-message", async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 });*/
+
+// VAPID 키 설정 (https://web-push-codelab.glitch.me/ 에서 생성 가능)
+const vapidKeys = {
+    publicKey: "BM3Xq3X-hbmCtGvoJv3Dl-WmW1nTYenl4tKQtE4pdcMTK0XDxjrECQSmtFgnPd1aqUoBINRCKrLqfqwIdemSXZs",
+    privateKey: "ejD0G1lxsoFJqohcz9fQnmZRS_srVyH7j-9_fBsf8bQ"
+};
+
+webpush.setVapidDetails(
+    "mailto:piw940317@gmail.com",
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);
+
+// 구독 정보를 받아서 푸시 전송
+const pushSubscription = { /* 클라이언트에서 받은 구독 객체 */ };
+const payload = JSON.stringify({ title: "법무부", body: "새로운 알림이 있습니다." });
+
+webpush.sendNotification(pushSubscription, payload).catch(err => console.error(err));
 /**************************************************************************/
 
 
@@ -61,8 +80,12 @@ const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 �
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
 
 const app = express();
+const options = {
+    key: fs.readFileSync('192.168.141.160+1-key.pem'), // 절대경로로 수정 필요
+    cert: fs.readFileSync('192.168.141.160+1.pem') // 절대경로로 수정 필요
+};
 
-app.locals.title = 'My App';
+app.locals.title = 'Node.js Server';
 
 app.set("view engine", "pug");
 app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립트의 경로
@@ -76,14 +99,15 @@ app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립�
 app.use("/public", express.static(__dirname + "/public")); // express.static 으로 정적파일 제공
 app.use(express.json()); // JSON 요청을 받을 수 있도록 설정
 
-// const cert = fs.readFileSync("cert.pem");
+const cert = fs.readFileSync("192.168.141.160+1.pem"); // 절대경로로 수정 필요
 
 const agent = new https.Agent({
-    rejectUnauthorized: false, // 인증서 검증 비활성화
-    // ca: cert // 인증서를 서버가 신뢰하도록 한다
+    // rejectUnauthorized: false, // 인증서 검증 비활성화
+    ca: cert // 인증서를 서버가 신뢰하도록 한다
 });
 
-const server = http.createServer(app);
+// const server = http.createServer(app);
+const server = https.createServer(options, app);
 const io = new Server(server, {
     cors: {
         // origin: ["https://admin.socket.io", "http://localhost:8090"],
