@@ -13,6 +13,8 @@ import https from "https";
 // const webpush = require("web-push");
 //import admin from "firebase-admin";
 
+require("dotenv").config(); // 반드시 가장 상단에
+
 /**************************************************************************/
 /*// Firebase 서비스 계정 키 로드
 const serviceAccount = JSON.parse(fs.readFileSync("path/to/serviceAccountKey.json", "utf-8"));
@@ -58,8 +60,8 @@ app.post("/send-message", async (req, res) => {
 
 // VAPID 키 설정 (https://web-push-codelab.glitch.me/ 에서 생성 가능)
 const vapidKeys = {
-    publicKey: "BM3Xq3X-hbmCtGvoJv3Dl-WmW1nTYenl4tKQtE4pdcMTK0XDxjrECQSmtFgnPd1aqUoBINRCKrLqfqwIdemSXZs",
-    privateKey: "ejD0G1lxsoFJqohcz9fQnmZRS_srVyH7j-9_fBsf8bQ"
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY
 };
 
 // webpush.setVapidDetails(
@@ -140,7 +142,7 @@ app.get('/*', (_, res) => { res.redirect("/") });
 
 
 
-const CHAT_FILE = path.join(__dirname, "chat.log");
+/*const CHAT_FILE = path.join(__dirname, "chat.log");
 
 function logChatMessage(username, message) {
     const now = new Date();
@@ -153,13 +155,13 @@ function logChatMessage(username, message) {
             console.error("로그 저장 실패:", err);
         }
     });
-}
+}*/
 
 function sendServerChatMessage(username, message) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
-    axios.post("http://127.0.0.1:8090/func/chat/save-file", {
+    axios.post("http://127.0.0.1:8090/func/api/chat/save-file", {
     // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
         username: username,
@@ -200,9 +202,10 @@ io.on('connection', (socket) => {
 
     socket.on("user_info", (data) => {
         username = data.username || "Guest";
+        username = username === 'nh824' ? '나현' : '인우';
         socket['nickname'] = username;
         // console.log(`User logged in: ${username}`);
-        // io.emit("enter_user", { username: data.username, msg: username + '님이 들어왔습니다.' });
+        io.emit("enter_user", { username: data.username, msg: username + '님이 들어왔습니다.', underline: 1 });
     });
 
     socket.on("new_msg", (data) => {
@@ -218,14 +221,16 @@ io.on('connection', (socket) => {
         socket.to(roomName).emit("welcome", socket.nickname, roomCount(roomName)); // welcome 이벤트 발생
         io.sockets.emit('room_change', publicRooms());
     });
+
     // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
     socket.on("disconnect", () => {
         // console.log(socket.nickname + '님이 나가셨습니다.')
         /*socket.rooms.forEach(room => { // set 이므로 forEach 가능
             socket.to(room).emit('bye', { username: socket.nickname, msg: socket.nickname + '님이 나갔습니다.' })
         });*/
-        // io.emit('bye', { username: socket.nickname, msg: socket.nickname + '님이 나갔습니다.' }); // room 만들지 않고 임시
+        io.emit('bye', { username: socket.nickname, msg: socket.nickname + '님이 나갔습니다.', underline: 1}); // room 만들지 않고 임시
     });
+
     // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
     /*socket.on("disconnect", () => {
         io.sockets.emit('room_change', publicRooms());
