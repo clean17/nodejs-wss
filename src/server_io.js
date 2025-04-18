@@ -13,7 +13,8 @@ import https from "https";
 // const webpush = require("web-push");
 //import admin from "firebase-admin";
 
-require("dotenv").config(); // 반드시 가장 상단에
+import dotenv from 'dotenv';
+dotenv.config();
 
 /**************************************************************************/
 /*// Firebase 서비스 계정 키 로드
