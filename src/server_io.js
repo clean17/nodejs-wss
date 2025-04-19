@@ -202,11 +202,11 @@ io.on('connection', (socket) => {
     let username = "Guest";
 
     socket.on("user_info", (data) => {
-        username = data.username || "Guest";
-        username = username === 'nh824' ? '나현' : '인우';
-        socket['nickname'] = username;
+        socket.username = data.username || "Guest";
+        socket.nickname = data.username === 'nh824' ? '나현' : '인우';
+
         // console.log(`User logged in: ${username}`);
-        io.emit("enter_user", { username: data.username, msg: username + '님이 들어왔습니다.', underline: 1 });
+        io.emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1 });
     });
 
     socket.on("new_msg", (data) => {
@@ -224,12 +224,12 @@ io.on('connection', (socket) => {
     });
 
     // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
-    socket.on("disconnect", () => {
+    socket.on("disconnecting", () => {
         // console.log(socket.nickname + '님이 나가셨습니다.')
         /*socket.rooms.forEach(room => { // set 이므로 forEach 가능
             socket.to(room).emit('bye', { username: socket.nickname, msg: socket.nickname + '님이 나갔습니다.' })
         });*/
-        io.emit('bye', { username: socket.nickname, msg: socket.nickname + '님이 나갔습니다.', underline: 1}); // room 만들지 않고 임시
+        io.emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1}); // room 만들지 않고 임시
     });
 
     // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
