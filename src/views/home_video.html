@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css" />
+    <title>Noom</title>
+</head>
+<body>
+<header>
+    <h1>Noom</h1>
+</header>
+<main>
+    <div id="welcome">
+        <form>
+            <input placeholder="room name" required type="text" />
+            <button>Enter room</button>
+        </form>
+    </div>
+    <div id="call">
+        <div id="myStream">
+            <video id="myFace" autoplay playsinline muted width="400" height="400"></video>
+            <video id="peerFace" autoplay playsinline width="400" height="400"></video>
+            <!--
+            <video id="myFace" autoplay playsinline>
+              <source src="video.mp4" type="video/mp4" />
+            </video>
+            -->
+            <div>
+                <button id="mute">소리 켜짐</button>
+                <button id="camera" style="margin-left: 100px;">카메라 켜기</button>
+                <select id="audios"></select>
+            </div>
+        </div>
+    </div>
+</main>
+<script src="/socket.io/socket.io.js"></script> <!-- const io = new Server(server); 가 제공한다 -->
+<script src="/public/js/app_video.js"></script> <!-- 위 코드 덕분에 const socket = io(); 를 가능하게 해준다 -->
+</body>
+</html>
