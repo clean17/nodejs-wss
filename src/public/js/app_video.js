@@ -47,44 +47,29 @@ async function getAudios() {
 }
 
 async function getMedia(deviceId) {
-    const initialConstrains = {
-        audio: true,
-        // video: {
-        //     facingMode: "user",
-        // },
-        video: false
+    // 기존 스트림 종료
+    if (myStream) {
+        myStream.getTracks().forEach(track => track.stop());
+        myStream = null;
     }
-    const audioContrains = {
+
+    const constraints = deviceId ? {
         audio: {
-            deviceId: {
-                exact: deviceId,
-            },
+            deviceId: { exact: deviceId }
         },
         video: true
-    }
-    /*     const cameraContrains = {
-            video: {
-                deviceId: {
-                    exact: deviceId,
-                },
-            },
-            audio: true
-        } */
+    } : {
+        audio: true,
+        video: true
+    };
 
     try {
-        // 웹캠은 사용중일때 접근 못함..
-        myStream = await navigator.mediaDevices.getUserMedia(deviceId ? audioContrains : initialConstrains); // MediaStream
-        // console.log("myStream 보여줘 ---------------------- ",myStream);
+        myStream = await navigator.mediaDevices.getUserMedia(constraints);
         myFace.srcObject = myStream;
-        if (!deviceId) {
-            await getAudios();
-        }
-        // await getCameras()   
-        myStream.getVideoTracks().forEach(track => {
-            track.enabled = !track.enabled
-        });
+        if (!deviceId) await getAudios();
     } catch (err) {
-        console.log(err);
+        console.error("🎥 getMedia 에러:", err);
+        alert("카메라 또는 마이크를 사용할 수 없습니다.\n권한 또는 다른 앱 확인이 필요합니다.");
     }
 }
 
@@ -124,12 +109,22 @@ async function handleCameraChange() {
 }
 
 async function handleAudioChange() {
-    await getMedia(audioSelect.value);
-    if (myPeerConnection) {
-        const videoTrack = myStream.getVideoTracks()[0]; // 변경된 myStream
-        const audioSender = myPeerConnection.getSenders()
-            .find((sender) => sender.track.kind === "audio");
-        audioSender.replaceTrack(videoTrack);
+    try {
+        await getMedia(audioSelect.value);
+
+        if (myPeerConnection) {
+            const videoTrack = myStream?.getVideoTracks()[0]; // 비디오 트랙을 가져오고
+            const audioSender = myPeerConnection.getSenders()
+                .find((sender) => sender.track && sender.track.kind === "audio"); // 안전하게 검사
+
+            if (audioSender && videoTrack) {
+                audioSender.replaceTrack(videoTrack);
+            } else {
+                console.warn("audioSender 또는 videoTrack이 없습니다.");
+            }
+        }
+    } catch (error) {
+        console.error("handleAudioChange 중 오류:", error);
     }
 }
 
@@ -194,7 +189,12 @@ socket.on('ice', (ice) => {
 
 ////////////////////////// RTC Code /////////////////////////////////////
 
-function makeConnection() { // 연결을 만든다.
+function makeConnection() {
+    if (!myStream) {
+        console.warn("❌ myStream이 없습니다. 연결 중단.");
+        return;
+    }
+
     myPeerConnection = new RTCPeerConnection({
         iceServers: [
             {
@@ -210,7 +210,7 @@ function makeConnection() { // 연결을 만든다.
     myPeerConnection.addEventListener('icecandidate', handleIce); // 두 Peer사이의 가능한 모든 경로를 수집하고 다른 Peer에 전송
     myPeerConnection.addEventListener('addstream', handleAddStream);
     myStream.getTracks().forEach(track => {
-        myPeerConnection.addTrack(track, myStream)
+        myPeerConnection.addTrack(track, myStream);
     });
 };
 
@@ -222,3 +222,8 @@ function handleAddStream(data) {
     const peerFace = document.getElementById('peerFace');
     peerFace.srcObject = data.stream;
 }
+
+// 카메라 장치 인식 확인
+navigator.mediaDevices.enumerateDevices().then(devices => {
+    console.log(devices.filter(d => d.kind === 'videoinput'));
+});
