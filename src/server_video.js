@@ -2,6 +2,12 @@ import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 
 app.locals.title = 'My App';
@@ -35,5 +41,5 @@ io.on('connection', (socket) => {
     });
 });
 
-const handleListen = () => console.log(app.locals.title + ' is listening on port 3000');
-server.listen(3000, handleListen);
+const handleListen = () => console.log(app.locals.title + ' is listening on port 3001');
+server.listen(3001, handleListen);
