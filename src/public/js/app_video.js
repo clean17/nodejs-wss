@@ -157,11 +157,26 @@ welcomeForm.addEventListener('submit', handleWelcomeSubmit);
 ///////////////////////// Socket Code /////////////////////////////////////
 
 socket.on('welcome', async () => { // room에 있는 Peer들은 각자의 offer를 생성 및 제안
+    console.log("👋 상대방이 방에 들어왔습니다");
+
+    // 1. 이전 연결이 있으면 정리
+    if (myPeerConnection) {
+        console.log("🧹 기존 연결 정리 중...");
+        myPeerConnection.getSenders().forEach(sender => sender.track?.stop());
+        myPeerConnection.close();
+        myPeerConnection = null;
+    }
+
+    // 2. 새 연결 생성
+    makeConnection(); // myPeerConnection 새로 생성됨
+
     myDataChannel = myPeerConnection.createDataChannel('chat');
     myDataChannel.addEventListener('message', console.log); // message 이벤트 - send에 반응
     console.log('dataChannel 생성됨');
+
     const offer = await myPeerConnection.createOffer();
-    myPeerConnection.setLocalDescription(offer); // 각자의 offer로 SDP(Session Description Protocol) 설정
+    await myPeerConnection.setLocalDescription(offer); // 각자의 offer로 SDP(Session Description Protocol) 설정
+
     socket.emit('offer', offer, roomName); // 만들어진 offer를 전송
 });
 
@@ -185,6 +200,19 @@ socket.on('answer', (answer) => {
 
 socket.on('ice', (ice) => {
     myPeerConnection.addIceCandidate(ice); // ICE(Interactive Connectivity Establishment)
+});
+
+socket.on("peer_left", () => {
+    if (peerFace.srcObject) {
+        peerFace.srcObject.getTracks().forEach(track => track.stop());
+    }
+    peerFace.srcObject = null;
+    if (myPeerConnection) {
+        // myPeerConnection.getSenders().forEach(sender => sender.track?.stop());
+        myPeerConnection.close();
+        myPeerConnection = null;
+    }
+    console.log("상대방이 나갔습니다");
 });
 
 ////////////////////////// RTC Code /////////////////////////////////////
@@ -226,4 +254,9 @@ function handleAddStream(data) {
 // 카메라 장치 인식 확인
 navigator.mediaDevices.enumerateDevices().then(devices => {
     console.log(devices.filter(d => d.kind === 'videoinput'));
+});
+
+window.addEventListener("beforeunload", () => {
+    socket.emit("leave_room", roomName); // 서버에 방 나간다고 알림
+    // WebRTC 연결 정리도 같이 하면 좋아
 });

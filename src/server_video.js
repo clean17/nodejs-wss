@@ -47,6 +47,9 @@ io.on('connection', (socket) => {
     socket.on('ice', (ice, roomName) => {
         socket.to(roomName).emit('ice', ice);
     });
+    socket.on("leave_room", (roomName) => {
+        socket.to(roomName).emit("peer_left");
+    });
 });
 
 const handleListen = () => console.log(app.locals.title + ' is listening on port 3001');
