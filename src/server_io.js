@@ -5,7 +5,7 @@ import cors from "cors";
 // const { instrument } = require("@socket.io/admin-ui");
 import { instrument } from "@socket.io/admin-ui";
 import { v4 as uuidv4 } from 'uuid';
-import path from "path";
+import path, {join} from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import axios from "axios";
@@ -104,7 +104,12 @@ app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립�
     credentials: true
 }));*/
 app.use("/public", express.static(__dirname + "/public")); // express.static 으로 정적파일 제공
+app.use("/", express.static(join(__dirname, "views"))); // views 폴더를 정적 파일 폴더로 설정
 app.use(express.json()); // JSON 요청을 받을 수 있도록 설정
+
+app.get("/", (req, res) => {
+    res.sendFile(join(__dirname, "views", "home_video.html"));
+});
 
 
 const agent = new https.Agent({
@@ -160,6 +165,7 @@ function sendServerChatMessage(username, message) {
 function publicRooms() {
     /* const sids = io.sockets.adapter.sids;
     const rooms = io.sockets.adapter.rooms; */ // 아래가 더 깔끔
+
     const { sockets: { adapter: { sids, rooms } } } = io;
     const publicRooms = [];
     rooms.forEach((_, key) => { // rooms, sids 동일한 Map 이다
@@ -240,6 +246,31 @@ io.on('connection', (socket) => {
     socket.on('nickname', (nickname) => {
         socket['nickname'] = nickname; // socket의 nickname 프로퍼티 설정
     })*/
+
+
+
+
+
+
+
+
+    // video 연결 테스트
+    socket.on('join_room', (roomName) => {
+        socket.join(roomName);
+        socket.to(roomName).emit('welcome');
+    });
+    socket.on('offer', (offer, roomName) => {
+        socket.to(roomName).emit('offer', offer);
+    });
+    socket.on('answer', (answer, roomName) => {
+        socket.to(roomName).emit('answer', answer);
+    });
+    socket.on('ice', (ice, roomName) => {
+        socket.to(roomName).emit('ice', ice);
+    });
+    socket.on("leave_room", (roomName) => {
+        socket.to(roomName).emit("peer_left");
+    });
 });
 
 
