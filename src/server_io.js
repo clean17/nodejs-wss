@@ -60,20 +60,20 @@ app.post("/send-message", async (req, res) => {
 });*/
 
 // VAPID 키 설정 (https://web-push-codelab.glitch.me/ 에서 생성 가능)
-const vapidKeys = {
+/*const vapidKeys = {
     publicKey: process.env.VAPID_PUBLIC_KEY,
     privateKey: process.env.VAPID_PRIVATE_KEY
 };
 
-// webpush.setVapidDetails(
-//     "mailto:piw940317@gmail.com",
-//     vapidKeys.publicKey,
-//     vapidKeys.privateKey
-// );
+webpush.setVapidDetails(
+    "mailto:piw940317@gmail.com",
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
+);*/
 
 // 구독 정보를 받아서 푸시 전송
-const pushSubscription = { /* 클라이언트에서 받은 구독 객체 */ };
-const payload = JSON.stringify({ title: "법무부", body: "새로운 알림이 있습니다." });
+// const pushSubscription = { /* 클라이언트에서 받은 구독 객체 */ };
+// const payload = JSON.stringify({ title: "법무부", body: "새로운 알림이 있습니다." });
 
 // webpush.sendNotification(pushSubscription, payload).catch(err => console.error(err));
 /**************************************************************************/
@@ -83,8 +83,10 @@ const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 �
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
 
 const app = express();
-const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem") // 절대경로로 수정 필요
-const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem") // 절대경로로 수정 필요
+// const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem") // 절대경로로 수정 필요
+const key = fs.readFileSync("C:/nginx/ssl/192.168.141.160+1-key.pem") // 절대경로로 수정 필요
+// const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem") // 절대경로로 수정 필요
+const cert= fs.readFileSync("C:/nginx/ssl/192.168.141.160+1.pem") // 절대경로로 수정 필요
 const options = {
     key: key, // 절대경로로 수정 필요
     cert: cert // 절대경로로 수정 필요
@@ -141,23 +143,6 @@ app.get('/*', (_, res) => { res.redirect("/") });
 });*/
 
 
-
-
-/*const CHAT_FILE = path.join(__dirname, "chat.log");
-
-function logChatMessage(username, message) {
-    const now = new Date();
-    now.setHours(now.getHours() + 9);  // UTC → KST 변환
-    const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
-    const logEntry = `${timestamp} | ${username} | ${message}\n`;
-
-    fs.appendFile(CHAT_FILE, logEntry, (err) => {
-        if (err) {
-            console.error("로그 저장 실패:", err);
-        }
-    });
-}*/
-
 function sendServerChatMessage(username, message) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
@@ -177,11 +162,12 @@ function publicRooms() {
     const rooms = io.sockets.adapter.rooms; */ // 아래가 더 깔끔
     const { sockets: { adapter: { sids, rooms } } } = io;
     const publicRooms = [];
-    rooms.forEach((_, key) => {
+    rooms.forEach((_, key) => { // rooms, sids 동일한 Map 이다
         if (sids.get(key) === undefined) {
             publicRooms.push(key);
         }
     })
+    // publicRooms 에는 생성된 room 리스트가 있다
     return publicRooms;
 }
 
@@ -189,51 +175,60 @@ function roomCount(roomName) {
     return io.sockets.adapter.rooms.get(roomName)?.size; // rooms 는 map, 내부는 set
 }
 
+
+///////////////////////// 소켓 ///////////////////////////////
+
+// io.emit(...)                 전체 클라이언트에게 전송
+// socket.emit(...)             자기 자신에게 전송
+// socket.broadcast.emit(...)   자기 제외, 전체에게 전송
+// io.to("room").emit(...)      특정 방에 있는 모든 사람에게 전송
+// socket.to("room").emit(...)  자기 제외 방 사람들에게 전송
+
 io.on('connection', (socket) => {
+    /*socket.onAny((event, ...args) => {
+        console.log(`socket.onAny ${event}`);
+    });*/
     // console.log(io.sockets.adapter);
+
     const randomUUID = uuidv4();
     const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후
     socket['nickname'] = `User-${shortenedUuid}`;
-    /*socket.onAny((event, ...args) => {
-        console.log(`got ${event}`);
-    });*/
-
-    // Python에서 받은 로그인된 유저 정보 저장
     let username = "Guest";
 
+    // 입장한 사용자 정보를 받아서 입장 알림을 보낸다
     socket.on("user_info", (data) => {
         socket.username = data.username || "Guest";
         socket.nickname = data.username === 'nh824' ? '나현' : '인우';
+        username = data.username;
 
-        // console.log(`User logged in: ${username}`);
-        io.emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1 });
+        socket.join(data.room);
+        // io.emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // 1:1 연결
+        io.to(data.room).emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // room
     });
 
-    socket.on("new_msg", (data) => {
-        // console.log(`Message from ${data.username}: ${data.msg}`);
-        // logChatMessage(data.username, data.msg);
-        sendServerChatMessage(data.username, data.msg);
-        io.emit("new_msg", { username: data.username, msg: data.msg });
-    });
-
-    socket.on('enter_room', (roomName, done) => {
+    // 클라이언트가 활성화된 방을 선택해서 들어갈 경우의 리스너
+    /*socket.on('enter_room', (roomName, done) => {
         socket.join(roomName);
         done(); // showRoom
         socket.to(roomName).emit("welcome", socket.nickname, roomCount(roomName)); // welcome 이벤트 발생
-        io.sockets.emit('room_change', publicRooms());
+        io.sockets.emit('room_change', publicRooms()); // 뷰의 방 이름 보여주는 이벤트
+    });*/
+
+    socket.on("new_msg", (data) => {
+        sendServerChatMessage(data.username, data.msg);
+        // io.emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); 1:1 연결
+        io.to(data.room).emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); // room
     });
 
-    // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
-    socket.on("disconnecting", () => {
-        // console.log(socket.nickname + '님이 나가셨습니다.')
-        /*socket.rooms.forEach(room => { // set 이므로 forEach 가능
-            socket.to(room).emit('bye', { username: socket.nickname, msg: socket.nickname + '님이 나갔습니다.' })
-        });*/
-        io.emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1}); // room 만들지 않고 임시
+    socket.on("disconnecting", () => { // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
+        socket.rooms.forEach(room => { // set 이므로 forEach 가능
+            socket.to(room).emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1})
+        }); // room
+        // io.emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1}); // 1:1, room 모두 가능
     });
 
-    // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
-    /*socket.on("disconnect", () => {
+
+    /*socket.on("disconnect", () => { // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
         io.sockets.emit('room_change', publicRooms());
     });
     // 메시지 수신
@@ -246,6 +241,8 @@ io.on('connection', (socket) => {
         socket['nickname'] = nickname; // socket의 nickname 프로퍼티 설정
     })*/
 });
+
+
 
 
 const handleListen = () => console.log(app.locals.title + ' is listening on port 3000');
