@@ -83,10 +83,8 @@ const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 �
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
 
 const app = express();
-// const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem") // 절대경로로 수정 필요
-const key = fs.readFileSync("C:/nginx/ssl/192.168.141.160+1-key.pem") // 절대경로로 수정 필요
-// const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem") // 절대경로로 수정 필요
-const cert= fs.readFileSync("C:/nginx/ssl/192.168.141.160+1.pem") // 절대경로로 수정 필요
+const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem") // 절대경로로 수정 필요
+const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem") // 절대경로로 수정 필요
 const options = {
     key: key, // 절대경로로 수정 필요
     cert: cert // 절대경로로 수정 필요
