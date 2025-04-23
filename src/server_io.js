@@ -182,6 +182,8 @@ function roomCount(roomName) {
 
 ///////////////////////// 소켓 ///////////////////////////////
 
+const userSockets = new Map(); // username → socket.id
+
 // io.emit(...)                 전체 클라이언트에게 전송
 // socket.emit(...)             자기 자신에게 전송
 // socket.broadcast.emit(...)   자기 제외, 전체에게 전송
@@ -249,11 +251,25 @@ io.on('connection', (socket) => {
 
 
 
-
-
-
     // video 연결 테스트
-    socket.on('join_room', (roomName) => {
+    socket.on('join_room', (roomName, username ) => {
+        const oldSocketId = userSockets.get(username);
+
+        if (oldSocketId && oldSocketId !== socket.id) {
+            // 동일 계정의 기존 연결이 있으면 강제 종료
+            io.to(oldSocketId).emit("force_disconnect");
+        }
+
+        // 현재 소켓을 새로 등록
+        userSockets.set(username, socket.id);
+
+        // 나중에 연결 해제 시 정리
+        socket.on("disconnect", () => {
+            if (userSockets.get(username) === socket.id) {
+                userSockets.delete(username);
+            }
+        });
+
         socket.join(roomName);
         socket.to(roomName).emit('welcome');
     });
@@ -268,6 +284,11 @@ io.on('connection', (socket) => {
     });
     socket.on("leave_room", (roomName) => {
         socket.to(roomName).emit("peer_left");
+    });
+    socket.on("disconnect", () => {
+        socket.rooms.forEach((roomName) => {
+            socket.to(roomName).emit("peer_left");
+        });
     });
 });
 
