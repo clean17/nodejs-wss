@@ -90,6 +90,8 @@ const options = {
     cert: cert // 절대경로로 수정 필요
 };
 
+let socket = null;
+
 app.locals.title = 'Node.js Server';
 
 app.set("view engine", "pug");
@@ -145,19 +147,30 @@ app.get('/*', (_, res) => { res.redirect("/") });
     res.json({ status: "broadcasted" });
 });*/
 
+function normalize_ip(ip_address) {
+    if (ip_address.startsWith("::ffff:")) {
+        return ip_address.substring(7,)
+    }
+    return ip_address
+}
 
-function sendServerChatMessage(username, message) {
+function sendServerChatMessage(username, message, socket) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
+    const clientIp = socket.handshake.headers["x-forwarded-for"] || socket.handshake.address;
+
     axios.post("http://127.0.0.1:8090/func/api/chat/save-file", {
     // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
         username: username,
         message: message
-    },
-        { httpsAgent: agent }
-        ).catch(err => console.error("로그 전송 실패:", err));
+    }, {
+        headers: {
+            "X-Client-IP": normalize_ip(clientIp)
+        },
+        httpsAgent: agent
+    }).catch(err => console.error("로그 전송 실패:", err));
 }
 
 function publicRooms() {
@@ -195,6 +208,7 @@ io.on('connection', (socket) => {
         console.log(`socket.onAny ${event}`);
     });*/
     // console.log(io.sockets.adapter);
+    socket = socket;
 
     const randomUUID = uuidv4();
     const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후
@@ -221,7 +235,7 @@ io.on('connection', (socket) => {
     });*/
 
     socket.on("new_msg", (data) => {
-        sendServerChatMessage(data.username, data.msg);
+        sendServerChatMessage(data.username, data.msg, socket);
         // io.emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); 1:1 연결
         io.to(data.room).emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); // room
     });
