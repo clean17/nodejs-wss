@@ -1,20 +1,20 @@
 import express from "express";
-import http from "http";
 import { Server } from "socket.io";
-import cors from "cors";
-// const { instrument } = require("@socket.io/admin-ui");
-import { instrument } from "@socket.io/admin-ui";
 import { v4 as uuidv4 } from 'uuid';
 import path, {join} from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import axios from "axios";
 import https from "https";
-// const webpush = require("web-push");
+import http from "http";
+import cors from "cors";
+//import { instrument } from "@socket.io/admin-ui";
+//import webpush from "web-push";
 //import admin from "firebase-admin";
 
-import dotenv from 'dotenv';
-dotenv.config();
+import dotenv from 'dotenv';    // .env 파일에 정의된 내용을 읽어서 process.env에 주입해주는 역할
+dotenv.config();                // .env 파일을 읽고 그 안의 내용을 process.env 객체에 로딩
+// process.env의 프로퍼티로 접근 > .env 에 PORT=32 가 있으면 process.env.PORT
 
 /**************************************************************************/
 /*// Firebase 서비스 계정 키 로드
@@ -83,19 +83,13 @@ const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 �
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
 
 const app = express();
-const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem") // 절대경로로 수정 필요
-const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem") // 절대경로로 수정 필요
+const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem");
+const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem");
+const ca= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chain.pem");
 const options = {
-    key: key, // 절대경로로 수정 필요
-    cert: cert // 절대경로로 수정 필요
+    key: key,
+    cert: cert
 };
-
-let socket = null;
-
-app.locals.title = 'Node.js Server';
-
-app.set("view engine", "pug");
-app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립트의 경로
 
 // CORS 설정 추가 (Express용)
 /*app.use(cors({
@@ -103,28 +97,31 @@ app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립�
     methods: ["GET", "POST"],
     credentials: true
 }));*/
+
+app.locals.title = 'Node.js Server';
+app.set("view engine", "pug");
+app.set("views", __dirname + "/views"); // __dirname 는 실행중인 스크립트의 경로
+
 app.use("/public", express.static(__dirname + "/public")); // express.static 으로 정적파일 제공
 app.use("/", express.static(join(__dirname, "views"))); // views 폴더를 정적 파일 폴더로 설정
 app.use(express.json()); // JSON 요청을 받을 수 있도록 설정
 
 app.get("/", (req, res) => {
+    // res.render('home_io'); // pug-ws
     res.sendFile(join(__dirname, "views", "home_video.html"));
 });
+app.get('/*', (_, res) => { res.redirect("/") });
 
 
-const agent = new https.Agent({
-    // rejectUnauthorized: false, // 인증서 검증 비활성화
-    ca: cert // 인증서를 서버가 신뢰하도록 한다
-});
 
 // const server = http.createServer(app);
 const server = https.createServer(options, app);
 const io = new Server(server, {
     cors: {
         // origin: ["https://admin.socket.io", "http://localhost:8090"],
-        origin: "*",
-        credentials: true,
-        methods: ["GET", "POST"]
+        origin: "*",                   //    CORS 설정: 모든 도메인 허용
+        credentials: true,             //    인증정보(Cookie 등) 포함 가능
+        methods: ["GET", "POST"]       //    허용할 메서드 지정
     },
 });
 
@@ -133,11 +130,6 @@ const io = new Server(server, {
     mode: "development",
 });*/
 
-app.get('/', function (req, res) {
-    res.render('home_io'); // pug-ws
-});
-
-app.get('/*', (_, res) => { res.redirect("/") });
 
 /*app.post("/broadcast", (req, res) => {
     const { message, room } = req.body;
@@ -154,13 +146,19 @@ function normalize_ip(ip_address) {
     return ip_address
 }
 
+const agent = new https.Agent({
+    // rejectUnauthorized: false, // 인증서 검증 비활성화
+    ca: ca // 인증서를 서버가 신뢰하도록 한다
+});
+
 function sendServerChatMessage(username, message, socket) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
     const clientIp = socket.handshake.headers["x-forwarded-for"] || socket.handshake.address;
 
-    axios.post("http://127.0.0.1:8090/func/api/chat/save-file", {
+    axios.post("https://chickchick.shop/func/api/chat/save-file", {
+    // axios.post("http://127.0.0.1:8090/func/api/chat/save-file", {
     // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
         username: username,
@@ -169,7 +167,7 @@ function sendServerChatMessage(username, message, socket) {
         headers: {
             "X-Client-IP": normalize_ip(clientIp)
         },
-        httpsAgent: agent
+        // httpsAgent: agent // 공인 인증서를 사용중이면 필요없다
     }).catch(err => console.error("로그 전송 실패:", err));
 }
 
@@ -192,10 +190,25 @@ function roomCount(roomName) {
     return io.sockets.adapter.rooms.get(roomName)?.size; // rooms 는 map, 내부는 set
 }
 
+async function sendRoomUserList(roomName) {
+    const sockets = await io.in(roomName).allSockets();  // Set of socket IDs
+    const usernames = new Set();
+
+    sockets.forEach((id) => {
+        const s = io.sockets.sockets.get(id);
+        if (s && s.username) {
+            usernames.add(s.username);
+        }
+    });
+
+    // room 내의 모든 클라이언트에게 사용자 목록 전송
+    io.to(roomName).emit('room_user_list', Array.from(usernames));
+}
 
 ///////////////////////// 소켓 ///////////////////////////////
 
-const userSockets = new Map(); // username → socket.id
+const videoUserSockets = new Map(); // username → socket.id
+let chatRoomName = undefined;
 
 // io.emit(...)                 전체 클라이언트에게 전송
 // socket.emit(...)             자기 자신에게 전송
@@ -203,12 +216,19 @@ const userSockets = new Map(); // username → socket.id
 // io.to("room").emit(...)      특정 방에 있는 모든 사람에게 전송
 // socket.to("room").emit(...)  자기 제외 방 사람들에게 전송
 
+// 소켓 서버는 하나
+// 소켓에 연결되는 소켓 인스턴스는 여러개 > socket.id를 가지는 별개의 인스턴스
+// room은 소켓 인스턴스를 묶는 그룹
+
+// 특정 room의 socket 리스트 가져오기
+// const socketsInRoom = await io.in('room-name').allSockets();
+// console.log(socketsInRoom); // Set of socket IDs
 io.on('connection', (socket) => {
+    // console.log('새 소켓 연결:', socket.id);
     /*socket.onAny((event, ...args) => {
         console.log(`socket.onAny ${event}`);
     });*/
     // console.log(io.sockets.adapter);
-    socket = socket;
 
     const randomUUID = uuidv4();
     const shortenedUuid = randomUUID.replace(/-/g, '').substring(0, 12); // '-'문자 제거 후
@@ -219,9 +239,11 @@ io.on('connection', (socket) => {
     socket.on("user_info", (data) => {
         socket.username = data.username || "Guest";
         socket.nickname = data.username === 'nh824' ? '나현' : '인우';
+        chatRoomName = data.room;
         username = data.username;
-
         socket.join(data.room);
+
+        sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
         // io.emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // 1:1 연결
         io.to(data.room).emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // room
     });
@@ -241,33 +263,25 @@ io.on('connection', (socket) => {
     });
 
     socket.on("disconnecting", () => { // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
+        // console.log('소켓 연결 종료:', socket.id);
+
         socket.rooms.forEach(room => { // set 이므로 forEach 가능
             socket.to(room).emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1})
-        }); // room
+
+            if (room !== socket.id) {
+                sendRoomUserList(room);
+            }
+        });
         // io.emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1}); // 1:1, room 모두 가능
     });
 
 
-    /*socket.on("disconnect", () => { // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
-        io.sockets.emit('room_change', publicRooms());
+    socket.on('check_video_call_by_user', (data) => {
     });
-    // 메시지 수신
-    socket.on("new_msg", (msg, room, done) => {
-        socket.to(room).emit("new_msg", `${socket.nickname} : ${msg}`);
-        done();
-    });
-    // 닉네임 변경
-    socket.on('nickname', (nickname) => {
-        socket['nickname'] = nickname; // socket의 nickname 프로퍼티 설정
-    })*/
-
-
-
-
-
     // video 연결 테스트
-    socket.on('join_room', (roomName, username ) => {
-        const oldSocketId = userSockets.get(username);
+    socket.on('join_room', (roomName, username) => {
+        socket.username = username;
+        const oldSocketId = videoUserSockets.get(username);
 
         if (oldSocketId && oldSocketId !== socket.id) {
             // 동일 계정의 기존 연결이 있으면 강제 종료
@@ -275,17 +289,12 @@ io.on('connection', (socket) => {
         }
 
         // 현재 소켓을 새로 등록
-        userSockets.set(username, socket.id);
-
-        // 나중에 연결 해제 시 정리
-        socket.on("disconnect", () => {
-            if (userSockets.get(username) === socket.id) {
-                userSockets.delete(username);
-            }
-        });
+        videoUserSockets.set(username, socket.id);
 
         socket.join(roomName);
         socket.to(roomName).emit('welcome');
+
+        socket.to(chatRoomName).emit('video_call_ready', { socketId: socket.id, videoCallRoomName: roomName, username: username });
     });
     socket.on('offer', (offer, roomName) => {
         socket.to(roomName).emit('offer', offer);
@@ -296,13 +305,19 @@ io.on('connection', (socket) => {
     socket.on('ice', (ice, roomName) => {
         socket.to(roomName).emit('ice', ice);
     });
-    socket.on("leave_room", (roomName) => {
+    socket.on("leave_room", (roomName, username) => {
         socket.to(roomName).emit("peer_left");
+        socket.to(chatRoomName).emit('video_call_ended', { socketId: socket.id, username: username });
     });
+
+    // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
     socket.on("disconnect", () => {
-        socket.rooms.forEach((roomName) => {
-            socket.to(roomName).emit("peer_left");
-        });
+        // io.sockets.emit('room_change', publicRooms());
+        // 여기서 socket.rooms 를 찾아봤자 room에서 끊겨서 안나온다
+
+        if (videoUserSockets.get(socket.username) === socket.id) {
+            videoUserSockets.delete(socket.username);
+        }
     });
 });
 
