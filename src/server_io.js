@@ -277,6 +277,8 @@ io.on('connection', (socket) => {
 
 
     socket.on('check_video_call_by_user', (data) => {
+        const socketId = data.userList.find(user => videoUserSockets.get(user));
+        io.emit('find_video_call', {userList: data.userList, socketId: socketId});
     });
     // video 연결 테스트
     socket.on('join_room', (roomName, username) => {
