@@ -245,7 +245,7 @@ io.on('connection', (socket) => {
 
         sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
         // io.emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // 1:1 연결
-        io.to(data.room).emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // room
+        socket.to(data.room).emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // room
     });
 
     // 클라이언트가 활성화된 방을 선택해서 들어갈 경우의 리스너
@@ -260,6 +260,14 @@ io.on('connection', (socket) => {
         sendServerChatMessage(data.username, data.msg, socket);
         // io.emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); 1:1 연결
         io.to(data.room).emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); // room
+    });
+
+    socket.on("typing", (data) => {
+        socket.to(data.room).emit("typing", { });
+    });
+
+    socket.on("stop_typing", (data) => {
+        socket.to(data.room).emit("stop_typing", { });
     });
 
     socket.on("disconnecting", () => { // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
