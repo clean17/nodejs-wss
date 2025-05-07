@@ -272,7 +272,7 @@ io.on('connection', (socket) => {
     socket.on("new_msg", (data) => {
         sendServerChatMessage(data.username, data.msg, socket);
         // io.emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); 1:1 연결
-        io.to(data.room).emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); // room
+        io.to(data.room).emit("new_msg", { chatId: data.chatId, username: data.username, msg: data.msg, room: data.room }); // room
     });
 
     socket.on("typing", (data) => {
@@ -281,6 +281,10 @@ io.on('connection', (socket) => {
 
     socket.on("stop_typing", (data) => {
         socket.to(data.room).emit("stop_typing", { });
+    });
+
+    socket.on("message_read", (data) => {
+        socket.to(data.room).emit("message_read_ack", { chatId: data.chatId, room: data.room });
     });
 
     socket.on("disconnecting", () => { // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
