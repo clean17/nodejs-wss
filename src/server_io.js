@@ -166,6 +166,7 @@ function sendServerChatMessage(username, message, chatId, socket) {
         chatId: chatId,
     }, {
         headers: {
+            "X-Forwarded-For": normalize_ip(clientIp),
             "X-Client-IP": normalize_ip(clientIp)
         },
         // httpsAgent: agent // 공인 인증서를 사용중이면 필요없다
