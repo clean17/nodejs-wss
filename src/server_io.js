@@ -151,7 +151,7 @@ const agent = new https.Agent({
     ca: ca // 인증서를 서버가 신뢰하도록 한다
 });
 
-function sendServerChatMessage(username, message, socket) {
+function sendServerChatMessage(username, message, chatId, socket) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
@@ -162,7 +162,8 @@ function sendServerChatMessage(username, message, socket) {
     // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
         username: username,
-        message: message
+        message: message,
+        chatId: chatId,
     }, {
         headers: {
             "X-Client-IP": normalize_ip(clientIp)
@@ -270,7 +271,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on("new_msg", (data) => {
-        sendServerChatMessage(data.username, data.msg, socket);
+        sendServerChatMessage(data.username, data.msg, data.chatId, socket);
         // io.emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); 1:1 연결
         io.to(data.room).emit("new_msg", { chatId: data.chatId, username: data.username, msg: data.msg, room: data.room }); // room
     });
