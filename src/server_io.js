@@ -237,7 +237,7 @@ io.on('connection', (socket) => {
     socket['nickname'] = `User-${shortenedUuid}`;
     let username = "Guest";
 
-    // 입장한 사용자 정보를 받아서 입장 알림을 보낸다
+    // 최초 입장 후 사용자 정보
     socket.on("user_info", (data) => {
         socket.username = data.username || "Guest";
         socket.nickname = data.username === 'nh824' ? '나현' : '인우';
@@ -250,16 +250,13 @@ io.on('connection', (socket) => {
         // socket.to(data.room).emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // room
     });
 
-    // 클라이언트가 활성화된 방을 선택해서 들어갈 경우의 리스너
+    // 브라우저 포커스 입장
     socket.on('enter_room', (data) => {
-        // socket.join(roomName);
-        // done(); // showRoom
-
         socket.username = data.username || "Guest";
         socket.nickname = data.username === 'nh824' ? '나현' : '인우';
         chatRoomName = data.room;
         username = data.username;
-        // socket.join(data.room);
+        socket.join(data.room);
 
         sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
 
