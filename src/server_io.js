@@ -245,7 +245,7 @@ io.on('connection', (socket) => {
         username = data.username;
         socket.join(data.room);
 
-        sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
+        // sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
         // io.emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // 1:1 연결
         // socket.to(data.room).emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // room
     });
