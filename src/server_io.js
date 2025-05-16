@@ -275,15 +275,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on("typing", (data) => {
-        socket.to(data.room).emit("typing", { });
+        socket.to(data.room).emit("typing", { username: data.username });
     });
 
     socket.on("stop_typing", (data) => {
-        socket.to(data.room).emit("stop_typing", { });
+        socket.to(data.room).emit("stop_typing", { username: data.username });
     });
 
     socket.on("message_read", (data) => {
-        socket.to(data.room).emit("message_read_ack", { chatId: data.chatId, room: data.room });
+        socket.to(data.room).emit("message_read_ack", { chatId: data.chatId, room: data.room, username: data.username });
     });
 
     socket.on("disconnecting", () => { // disconnecting; 연결이 끊기기 직전에 발생하는 이벤트
