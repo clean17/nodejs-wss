@@ -151,25 +151,27 @@ const agent = new https.Agent({
     ca: ca // 인증서를 서버가 신뢰하도록 한다
 });
 
-function sendServerChatMessage(username, message, chatId, socket) {
+function sendServerChatMessage(username, message, socket) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
     const clientIp = socket.handshake.headers["x-forwarded-for"] || socket.handshake.address;
 
-    axios.post("https://chickchick.shop/func/api/chat/save-file", {
+    return axios.post("https://chickchick.shop/func/api/chat/save-file", {
     // axios.post("http://127.0.0.1:8090/func/api/chat/save-file", {
     // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
         username: username,
         message: message,
-        chatId: chatId,
     }, {
         headers: {
             "X-Forwarded-For": normalize_ip(clientIp),
             "X-Client-IP": normalize_ip(clientIp)
         },
         // httpsAgent: agent // 공인 인증서를 사용중이면 필요없다
+    }).then((res)=> {
+        const data = res.data;
+        return data['inserted_id'];
     }).catch(err => console.error("로그 전송 실패:", err));
 }
 
@@ -268,10 +270,10 @@ io.on('connection', (socket) => {
         socket.to(data.room).emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1})
     })
 
-    socket.on("new_msg", (data) => {
-        sendServerChatMessage(data.username, data.msg, data.chatId, socket);
+    socket.on("new_msg", async (data) => {
+        const chatId = await sendServerChatMessage(data.username, data.msg, socket);
         // io.emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); 1:1 연결
-        io.to(data.room).emit("new_msg", { chatId: data.chatId, username: data.username, msg: data.msg, room: data.room }); // room
+        io.to(data.room).emit("new_msg", { chatId: chatId, username: data.username, msg: data.msg, room: data.room}); // room
     });
 
     socket.on("typing", (data) => {
