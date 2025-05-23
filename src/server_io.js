@@ -151,7 +151,7 @@ const agent = new https.Agent({
     ca: ca // 인증서를 서버가 신뢰하도록 한다
 });
 
-function sendServerChatMessage(username, message, socket) {
+function sendServerChatMessage(username, message, roomname, socket) {
     const now = new Date();
     now.setHours(now.getHours() + 9);  // UTC → KST 변환
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
@@ -163,6 +163,7 @@ function sendServerChatMessage(username, message, socket) {
         timestamp: timestamp,
         username: username,
         message: message,
+        roomname: roomname,
     }, {
         headers: {
             "X-Forwarded-For": normalize_ip(clientIp),
@@ -271,7 +272,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on("new_msg", async (data) => {
-        const chatId = await sendServerChatMessage(data.username, data.msg, socket);
+        const chatId = await sendServerChatMessage(data.username, data.msg, data.room, socket);
         // io.emit("new_msg", { username: data.username, msg: data.msg, room: data.room }); 1:1 연결
         io.to(data.room).emit("new_msg", { chatId: chatId, username: data.username, msg: data.msg, room: data.room}); // room
     });
@@ -302,7 +303,10 @@ io.on('connection', (socket) => {
     });
 
 
+
+
     socket.on('check_video_call_by_user', (data) => {
+        // videoUserSockets Map에 등록된 소켓의 첫번째 요소를 리턴
         const socketId = data.userList.find(user => videoUserSockets.get(user));
         io.emit('find_video_call', {userList: data.userList, socketId: socketId});
     });
@@ -345,6 +349,7 @@ io.on('connection', (socket) => {
 
         if (videoUserSockets.get(socket.username) === socket.id) {
             videoUserSockets.delete(socket.username);
+            socket.to(chatRoomName).emit('video_call_ended', { socketId: socket.id, username: socket.username });
         }
     });
 });
