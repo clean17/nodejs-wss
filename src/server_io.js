@@ -83,7 +83,7 @@ const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 �
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
 
 const app = express();
-const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/privkey.pem");
+const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-key.pem");
 const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem");
 const ca= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chain.pem");
 const options = {
