@@ -267,6 +267,10 @@ io.on('connection', (socket) => {
         // io.sockets.emit('room_change', publicRooms()); // 뷰의 방 이름 보여주는 이벤트
     });
 
+    socket.on('pending_chat_user', (data) => {
+        sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
+    })
+
     socket.on('exit_room', (data) => {
         socket.to(data.room).emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1})
     })
