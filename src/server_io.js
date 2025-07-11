@@ -267,7 +267,7 @@ io.on('connection', (socket) => {
         // io.sockets.emit('room_change', publicRooms()); // 뷰의 방 이름 보여주는 이벤트
     });
 
-    socket.on('pending_chat_user', (data) => {
+    socket.on('polling_chat_user', (data) => {
         sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
     })
 
