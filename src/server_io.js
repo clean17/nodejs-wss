@@ -201,6 +201,24 @@ async function sendRoomUserList(roomName) {
 
     sockets.forEach((id) => {
         const s = io.sockets.sockets.get(id);
+        /*
+        s.adapter.rooms
+        rooms: Map(3) {
+          'i3ylYV2tYDGuC2Y7AAAB' => [Set],
+          'syk5yI2CgkXd9qReAAAD' => [Set],
+          'chat-room' => [Set]
+        },
+
+        s.adapter.sids
+        sids: Map(2) {
+          'i3ylYV2tYDGuC2Y7AAAB' => [Set],
+          'syk5yI2CgkXd9qReAAAD' => [Set]
+        },
+
+        s.id: 'syk5yI2CgkXd9qReAAAD',
+        s.nickname: '닉네임',
+        s.username: 'fkaus14',
+        * */
         if (s && s.username) {
             usernames.add(s.username);
         }
@@ -210,9 +228,43 @@ async function sendRoomUserList(roomName) {
     io.to(roomName).emit('room_user_list', Array.from(usernames));
 }
 
+async function addRoomUserList(roomname, username) {
+    const sockets = await io.in(roomname).allSockets();  // Set of socket IDs
+    sockets.forEach((id) => {
+        const s = io.sockets.sockets.get(id);
+        if (s && s.username) {
+            if (s.username === username) {
+                chatUserSet.add(username);
+            }
+            chatSockets.set(roomname, chatUserSet);
+        }
+    });
+
+    // console.log('userList', Array.from(chatUserSet))
+    io.to(roomname).emit('room_user_list', Array.from(chatUserSet));
+}
+
+async function removeRoomUserList(roomname, username) {
+    const sockets = await io.in(roomname).allSockets();  // Set of socket IDs
+    sockets.forEach((id) => {
+        const s = io.sockets.sockets.get(id);
+        if (s && s.username) {
+            if (s.username === username) {
+                chatUserSet.delete(username);
+            }
+            chatSockets.set(roomname, chatUserSet);
+        }
+    });
+
+    io.to(roomname).emit('room_user_list', Array.from(chatUserSet));
+}
+
+
 ///////////////////////// 소켓 ///////////////////////////////
 
 const videoUserSockets = new Map(); // username → socket.id
+const chatSockets = new Map(); // username → socket.id
+const chatUserSet = new Set();
 let chatRoomName = undefined;
 
 // io.emit(...)                 전체 클라이언트에게 전송
@@ -261,17 +313,21 @@ io.on('connection', (socket) => {
         username = data.username;
         socket.join(data.room);
 
-        sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
+        // sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
+        addRoomUserList(data.room, username);  // 입장 후 사용자 목록 전송
 
         socket.to(data.room).emit("enter_user", { username: socket.username, msg: socket.nickname + '님이 들어왔습니다.', underline: 1, room: data.room }); // room
         // io.sockets.emit('room_change', publicRooms()); // 뷰의 방 이름 보여주는 이벤트
     });
 
     socket.on('polling_chat_user', (data) => {
-        sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
+        // sendRoomUserList(data.room);  // 입장 후 사용자 목록 전송
+        addRoomUserList(data.room, data.username);  // 입장 후 사용자 목록 전송
     })
 
     socket.on('exit_room', (data) => {
+        // console.log('나갔어')
+        removeRoomUserList(data.room, data.username);
         socket.to(data.room).emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1})
     })
 
@@ -300,7 +356,8 @@ io.on('connection', (socket) => {
             // socket.to(room).emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1})
 
             if (room !== socket.id) {
-                sendRoomUserList(room);
+                // sendRoomUserList(room);
+                // removeRoomUserList(room);
             }
         });
         // io.emit('bye', { username: socket.username, msg: (socket.nickname || socket.username) + '님이 나갔습니다.', underline: 1}); // 1:1, room 모두 가능
