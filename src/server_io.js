@@ -83,9 +83,13 @@ const __filename = fileURLToPath(import.meta.url); // import.meta.url; 현재 �
 const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경로
 
 const app = express();
+// 키 쌍이 맞아야 한다
 const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-key.pem");
-const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/fullchain.pem");
-const ca= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chain.pem");
+const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-chain.pem");
+// fullchain.pem : full-chain; 서버 인증서(도메인 인증서, leaf certificate); “서버 인증서 + 중간 CA 인증서”가 합쳐진 파일
+// chain.pem : chain-only; 중간 인증서(intermediate CA)
+// cert가 full-chain, ca가 chain-only
+// readme 참고
 const options = {
     key: key,
     cert: cert

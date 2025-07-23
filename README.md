@@ -111,3 +111,6 @@ exec: 실행할 명령어 지정
 ✅ `nodemon.json`의 `exec` 설정에 의해 `babel-node src/server.js` 실행
 
  최종 실행되는 명령어는 `babel-node src/server.js`
+ 
+## chain 인증서 
+![img.png](img.png)
