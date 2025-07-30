@@ -85,7 +85,7 @@ const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경
 const app = express();
 // 키 쌍이 맞아야 한다
 const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-key.pem");
-const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-chain.pem");
+const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-fullchain.pem");
 // fullchain.pem : full-chain; 서버 인증서(도메인 인증서, leaf certificate); “서버 인증서 + 중간 CA 인증서”가 합쳐진 파일
 // chain.pem : chain-only; 중간 인증서(intermediate CA)
 // cert가 full-chain, ca가 chain-only
@@ -152,7 +152,7 @@ function normalize_ip(ip_address) {
 
 const agent = new https.Agent({
     // rejectUnauthorized: false, // 인증서 검증 비활성화
-    ca: ca // 인증서를 서버가 신뢰하도록 한다
+    // ca: cert // 인증서를 서버가 신뢰하도록 한다
 });
 
 function sendServerChatMessage(username, message, roomname, socket) {
