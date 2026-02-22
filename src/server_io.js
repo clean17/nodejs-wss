@@ -84,8 +84,8 @@ const __dirname = path.dirname(__filename); // 파일이 있는 디렉토리 경
 
 const app = express();
 // 키 쌍이 맞아야 한다
-const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-key.pem");
-const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.shop-fullchain.pem");
+const key = fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.kr-key.pem");
+const cert= fs.readFileSync("C:/nginx/nginx-1.26.2/ssl/chickchick.kr-fullchain.pem");
 // fullchain.pem : full-chain; 서버 인증서(도메인 인증서, leaf certificate); “서버 인증서 + 중간 CA 인증서”가 합쳐진 파일
 // chain.pem : chain-only; 중간 인증서(intermediate CA)
 // cert가 full-chain, ca가 chain-only
@@ -161,7 +161,9 @@ function sendServerChatMessage(username, message, roomname, socket) {
     const timestamp = now.toISOString().slice(2, 19).replace(/[-T:]/g, "");
     const clientIp = socket.handshake.headers["x-forwarded-for"] || socket.handshake.address;
 
-    return axios.post("https://chickchick.shop/func/api/chat/save-file", {
+    const cookieHeader = `username=${encodeURIComponent(username)}`;
+
+    return axios.post("https://chickchick.kr/func/api/chat/save-file", {
     // axios.post("http://127.0.0.1:8090/func/api/chat/save-file", {
     // axios.post("https://merci-seoul.iptime.org/func/chat/save-file", {
         timestamp: timestamp,
@@ -171,7 +173,8 @@ function sendServerChatMessage(username, message, roomname, socket) {
     }, {
         headers: {
             "X-Forwarded-For": normalize_ip(clientIp),
-            "X-Client-IP": normalize_ip(clientIp)
+            "X-Client-IP": normalize_ip(clientIp),
+            "Cookie": cookieHeader
         },
         // httpsAgent: agent // 공인 인증서를 사용중이면 필요없다
     }).then((res)=> {
