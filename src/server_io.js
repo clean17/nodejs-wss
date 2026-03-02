@@ -375,11 +375,14 @@ io.on('connection', (socket) => {
 
     socket.on('check_video_call_by_user', (data) => {
         // videoUserSockets Map에 등록된 소켓의 첫번째 요소를 리턴
-        const socketId = data.userList.find(user => videoUserSockets.get(user));
-        io.emit('find_video_call', {userList: data.userList, socketId: socketId});
+        /*const socketId = data.userList.find(user => {
+            videoUserSockets.get(user)
+        });*/
+        const userList = Array.from(videoUserSockets.keys());
+        io.emit('find_video_call', {userList: userList});
     });
     // video 연결 테스트
-    socket.on('join_room', (roomName, username) => {
+    socket.on('join_video_socket', (roomName, username) => {
         socket.username = username;
         const oldSocketId = videoUserSockets.get(username);
 
@@ -406,22 +409,36 @@ io.on('connection', (socket) => {
         socket.to(roomName).emit('ice', ice);
     });
     socket.on("leave_room", (roomName, username) => {
-        socket.to(roomName).emit("peer_left");
-        socket.to(chatRoomName).emit('video_call_ended', { socketId: socket.id, username: username });
+        // socket.to(roomName).emit("peer_left");
+
+        // 상대에게 비주얼 신호를 끈다
+        // socket.to(chatRoomName).emit('video_call_ended', { socketId: socket.id, username: username });
     });
 
     // disconnect; 연결이 완전히 끊긴 후에 발생하는 이벤트
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
         // io.sockets.emit('room_change', publicRooms());
         // 여기서 socket.rooms 를 찾아봤자 room에서 끊겨서 안나온다
 
         if (videoUserSockets.get(socket.username) === socket.id) {
             videoUserSockets.delete(socket.username);
-            socket.to(chatRoomName).emit('video_call_ended', { socketId: socket.id, username: socket.username });
+
+            const msg = '<span style="color:green;"><i class="fa-solid fa-phone-slash" style="color: red;"></i></span>  통화종료';
+            const chatId = await sendServerChatMessage(socket.username, msg, chatRoomName, socket);
+            io.to(chatRoomName).emit("new_msg", {chatId: chatId, username: socket.username, msg: msg, room: chatRoomName}); // room
+
+            // 연결이 끊겼을 때만 상대에게 비주얼 신호를 끈다
+            socket.to(chatRoomName).emit('video_call_ended', {socketId: socket.id, username: socket.username});
         }
     });
 });
 
+/*setInterval(() => {
+    console.log('비디오 유저 소켓')
+    for (const [key, value] of videoUserSockets) {
+        console.log(`${key} => ${value}`);
+    }
+}, 5000)*/
 
 
 

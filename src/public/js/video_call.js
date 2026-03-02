@@ -147,7 +147,7 @@ async function handleWelcomeSubmit(event) {
     event.preventDefault();
     const input = welcomeForm.querySelector('input');
     await initMedia();
-    socket.emit('join_room', 'nh');
+    socket.emit('join_video_socket', 'nh');
     roomName = 'nh'; // 전역변수에 저장
     input.value = "";
 }

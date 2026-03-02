@@ -34,7 +34,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 io.on('connection', (socket) => {
-    socket.on('join_room', (roomName) => {
+    socket.on('join_video_socket', (roomName) => {
         socket.join(roomName);
         socket.to(roomName).emit('welcome');
     }); 
